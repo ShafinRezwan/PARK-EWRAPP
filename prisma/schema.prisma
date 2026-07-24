@@ -7,9 +7,95 @@ datasource db {
   provider = "postgresql"
 }
 
+enum Role {
+  ADMIN
+  CONTRACTS
+  SUPERINTENDENT
+  ACCOUNTING
+  PROJECT_MANAGER
+}
+
+enum ReportStatus {
+  DRAFT
+  PENDING_APPROVAL
+  APPROVED
+  REJECTED
+}
+
 model User {
-  id        Int      @id @default(autoincrement())
+  id        String   @id @default(cuid())
+  firstName String
+  lastName  String
   email     String   @unique
-  name      String?
+  password  String
+  role      Role     @default(CONTRACTS)
   createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+model Job {
+  id               String              @id @default(cuid())
+  jobNumber        String              @unique
+  jobName          String
+  customerName     String
+  projectManager   String
+  createdAt        DateTime            @default(now())
+  extraWorkReports Extra_Work_Report[]
+}
+
+model Employee {
+  id             String @id @default(cuid())
+  employeeNumber String @unique
+  firstName      String
+  lastName       String
+  role           String
+  baseCode       String
+  regularRate    Float
+  saturdayRate   Float
+  sundayRate     Float
+}
+
+model Equipment {
+  id            String @id @default(cuid())
+  equipmentCode String
+  equipmentName String
+  equipmentType String
+  equipmentRate Float
+}
+
+model Material {
+  id           String @id @default(cuid())
+  materialType String
+  materialUnit String
+  quantity     Float
+}
+
+model Invoice {
+  id            String @id @default(cuid())
+  invoiceType   String
+  invoiceAmount Float
+  invoiceMarkup Float
+}
+
+model attachment {
+  id         String   @id @default(cuid())
+  reportID   String
+  fileName   String
+  fileUrl    String
+  uploadedAt DateTime @default(now())
+}
+
+model Extra_Work_Report {
+  id          String   @id @default(cuid())
+  ewrNumber   String   @unique
+  workDate    DateTime
+  recipent    String
+  description String
+  jobName     String
+  jobNumber   String
+  job         Job?     @relation(fields: [jobId], references: [id])
+  jobId       String?
+}
+
+model To_Do_Task {
 }
