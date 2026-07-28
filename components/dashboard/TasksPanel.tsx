@@ -68,7 +68,7 @@ export default function TasksPanel() {
             tasks.map((task) => (
               <div
                 key={task.id}
-                className="grid grid-cols-[1fr_220px_70px] items-center gap-8 border-b-2 border-park-gray px-6 py-3 text-xl font-bold"
+                className="grid grid-cols-[1fr_220px_70px] items-center gap-8 border-b-2 border-park-gray px-6 py-3 text-xl text-black"
               >
                 <span
                   className={`transition-all duration-300 ${
@@ -85,7 +85,7 @@ export default function TasksPanel() {
                     task.completion
                       ? ""
                       : "line-through text-park-gray opacity-60"
-                  } "whitespace-nowrap text-center"`}
+                  } "whitespace-nowrap text-center "`}
                 >
                   {task.dateOfCompletion}
                 </span>

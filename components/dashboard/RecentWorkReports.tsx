@@ -77,7 +77,7 @@ export default function RecentWorkReports() {
               <th className="px-3 py-1 text-center underline">Sent</th>
             </tr>
           </thead>
-          <tbody className="text-xl text-black mx-300">
+          <tbody className="text-xl text-black">
             {reports.map((report, index) => (
               <tr
                 key={`${report.ewrNumber}-${index}`}
