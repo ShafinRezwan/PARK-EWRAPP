@@ -18,3 +18,7 @@
 .park-logo {
   width: 12%;
 }
+
+.search-input {
+  @apply border-3 border-black rounded-md px-4 py-1 text-gray-500;
+}
