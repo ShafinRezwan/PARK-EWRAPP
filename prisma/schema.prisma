@@ -22,6 +22,17 @@ enum ReportStatus {
   REJECTED
 }
 
+enum TaskStatus {
+  PENDING
+  COMPLETED
+}
+
+enum AttachmentType {
+  PHOTO
+  RECEIPT
+  DOCUMENT
+}
+
 model User {
   id        String   @id @default(cuid())
   firstName String
@@ -31,36 +42,50 @@ model User {
   role      Role     @default(CONTRACTS)
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
+
+  createdTasks   ToDoTask[]        @relation("TaskCreator")
+  assignedTasks  ToDoTask[]        @relation("TaskAssignee")
+  createdReports ExtraWorkReport[] @relation("ReportCreator")
 }
 
 model Job {
-  id               String              @id @default(cuid())
-  jobNumber        String              @unique
-  jobName          String
-  customerName     String
-  projectManager   String
-  createdAt        DateTime            @default(now())
-  extraWorkReports Extra_Work_Report[]
+  id                    String              @id @default(cuid())
+  jobNumber             String              @unique
+  jobName               String
+  divison               String
+  year                  Int
+  customerName          String?
+  projectSuperIntendent String?
+  createdAt             DateTime            @default(now())
+  extraWorkReports      Extra_Work_Report[]
+  tasks                 ToDoTask[]
+
+  @@index([division])
+  @@index([year])
 }
 
 model Employee {
-  id             String @id @default(cuid())
-  employeeNumber String @unique
-  firstName      String
-  lastName       String
+  id             String   @id @default(cuid())
+  employeeNumber String   @unique
+  firstName      String?
+  lastName       String?
   role           String
   baseCode       String
   regularRate    Float
   saturdayRate   Float
   sundayRate     Float
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
 }
 
 model Equipment {
-  id            String @id @default(cuid())
+  id            String   @id @default(cuid())
   equipmentCode String
   equipmentName String
   equipmentType String
   equipmentRate Float
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
 }
 
 model Material {
@@ -89,12 +114,20 @@ model Extra_Work_Report {
   id          String   @id @default(cuid())
   ewrNumber   String   @unique
   workDate    DateTime
-  recipent    String
+  recipent    String?
   description String
-  jobName     String
-  jobNumber   String
   job         Job?     @relation(fields: [jobId], references: [id])
   jobId       String?
+
+  labourEntries    LabourEntry[]
+  equipmentEntries EquipmentEntry[]
+  materialEntries  MaterialEntry[]
+  invoices         Invoice[]
+  attachments      Attachment[]
+
+  @@index([jobId])
+  @@index([status])
+  @@index([workDate])
 }
 
 model To_Do_Task {

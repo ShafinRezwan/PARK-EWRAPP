@@ -1,7 +1,14 @@
-import React from "react";
-import Link from "next/link";
+type DashboardHeaderProps = {
+  buttonText: string;
+  onButtonClick: () => void;
+  searchPlaceholder?: string;
+};
 
-export default function DashboardHeader() {
+export default function DashboardHeader({
+  buttonText,
+  onButtonClick,
+  searchPlaceholder = "Search",
+}: DashboardHeaderProps) {
   return (
     <header className="flex items-center justify-between gap-6">
       <label className="sr-only" htmlFor="dashboard-search">
@@ -10,16 +17,17 @@ export default function DashboardHeader() {
       <input
         id="dashboard-search"
         type="search"
-        placeholder="Search"
+        placeholder={searchPlaceholder}
         className="w-full max-w-sm rounded-md border-[3px] border-black px-3 py-2 text-xl text-park-gray outline-none transition focus:border-park-green"
       />
 
-      <Link
-        href="/jobs/create"
-        className="shrink-0 rounded-md border-[3px] border-park-green bg-park-green px-10 py-2 text-xl  text-white transition hover:bg-green-800 hover:border-green-800"
+      <button
+        type="button"
+        onClick={onButtonClick}
+        className="rounded-md bg-park-green px-10 py-3 transition-all duration-200 text-xl text-white cursor-pointer hover:bg-park-green-dark"
       >
-        Create New Job
-      </Link>
+        {buttonText}
+      </button>
     </header>
   );
 }

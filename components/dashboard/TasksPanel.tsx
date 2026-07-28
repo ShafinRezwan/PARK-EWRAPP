@@ -2,10 +2,12 @@
 
 import Link from "next/link";
 import { useState } from "react";
-
+import Modal from "../Modal";
+import CreateTaskModal from "../CreateTaskModal";
 type Task = {
   id: number;
   title: string;
+  jobNumber: string;
   dateOfCompletion: string;
   completion: boolean;
 };
@@ -14,18 +16,21 @@ const initialTasks: Task[] = [
   {
     id: 1,
     title: "Send Jeremy EWRS for Job 26-045",
+    jobNumber: "26-045",
     dateOfCompletion: "Aug-15-2026",
     completion: true,
   },
   {
     id: 2,
     title: "Review EWR 9841",
+    jobNumber: "26-050",
     dateOfCompletion: "Aug-18-2026",
     completion: false,
   },
   {
     id: 3,
     title: "Review EWR 99804",
+    jobNumber: "26-023",
     dateOfCompletion: "Aug-20-2026",
     completion: true,
   },
@@ -33,6 +38,7 @@ const initialTasks: Task[] = [
 
 export default function TasksPanel() {
   const [tasks, setTasks] = useState<Task[]>(initialTasks);
+  const [showCreateTask, setShowCreateTask] = useState(false);
 
   const toggleTaskCompletion = (taskId: number) => {
     setTasks((currentTasks) =>
@@ -54,12 +60,15 @@ export default function TasksPanel() {
           Tasks / Deadlines
         </h2>
 
-        <Link
-          href="/tasks/create"
+        <button
           className="shrink-0 rounded-md border-[3px] border-park-green bg-park-green px-10 py-2 text-xl font-bold text-white transition hover:border-green-800 hover:bg-green-800"
+          onClick={() => setShowCreateTask(true)}
         >
           Create New Task
-        </Link>
+        </button>
+        <Modal isOpen={showCreateTask} onClose={() => setShowCreateTask(false)}>
+          <CreateTaskModal onClose={() => setShowCreateTask(false)} />
+        </Modal>
       </div>
 
       <section className="flex min-h-0 flex-col rounded-md border-[3px] border-black px-4 py-2">
@@ -68,7 +77,7 @@ export default function TasksPanel() {
             tasks.map((task) => (
               <div
                 key={task.id}
-                className="grid grid-cols-[1fr_220px_70px] items-center gap-8 border-b-2 border-park-gray px-6 py-3 text-xl text-black"
+                className="grid grid-cols-[1fr_150px_180px_50px] items-center gap-8 border-b-2 border-park-gray px-6 py-3 text-xl text-black"
               >
                 <span
                   className={`transition-all duration-300 ${
@@ -85,7 +94,17 @@ export default function TasksPanel() {
                     task.completion
                       ? ""
                       : "line-through text-park-gray opacity-60"
-                  } "whitespace-nowrap text-center "`}
+                  }`}
+                >
+                  {task.jobNumber}
+                </span>
+
+                <span
+                  className={`transition-all duration-300 ${
+                    task.completion
+                      ? ""
+                      : "line-through text-park-gray opacity-60"
+                  } "whitespace-nowrap text-center"`}
                 >
                   {task.dateOfCompletion}
                 </span>
