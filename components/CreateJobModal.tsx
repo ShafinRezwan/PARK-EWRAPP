@@ -4,7 +4,7 @@ type Props = {
   onClose: () => void;
 };
 
-export default function CreateJobModal({ onClose }: Props) {
+export default function createJobModal({ onClose }: Props) {
   return (
     <>
       <div className="grid grid-cols-[180px_1fr_150px] gap-6">

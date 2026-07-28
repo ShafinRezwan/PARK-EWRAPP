@@ -6,7 +6,8 @@ import DashboardHeader from "@/components/dashboard/DashboardHeader";
 import Sidebar from "@/components/sidebar";
 import Link from "next/link";
 import Modal from "@/components/Modal";
-import CreateJobModal from "@/components/CreateJobModal";
+import CreateJobModal from "@/components/createJobModal";
+
 type JobClassification = {
   divisionCode: string;
   jobType: string;

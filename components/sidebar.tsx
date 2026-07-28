@@ -39,13 +39,25 @@ export default function Sidebar() {
             <Link
               key={item.href}
               href={item.href}
-              className={
-                isActive
-                  ? "bg-park-green px-6 py-3 text-center text-2xl font-bold text-white"
-                  : "px-6 py-6 text-center text-2xl font-bold text-park-green transition-colors hover:bg-green-50"
-              }
+              className={`
+    group relative overflow-hidden px-6 py-6 text-center text-2xl font-bold
+    transition-colors duration-400
+    ${
+      isActive ? "bg-park-green text-white" : "text-park-green hover:text-white"
+    }
+  `}
             >
-              {item.label}
+              {!isActive && (
+                <span
+                  className="
+        absolute inset-0 -translate-x-full bg-park-green
+        transition-transform duration-400 ease-out
+        group-hover:translate-x-0
+      "
+                />
+              )}
+
+              <span className="relative z-10">{item.label}</span>
             </Link>
           );
         })}

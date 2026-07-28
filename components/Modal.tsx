@@ -15,7 +15,7 @@ export default function Modal({ isOpen, onClose, children }: ModalProps) {
           onClick={onClose}
           className="absolute right-6 top-4 text-4xl font-bold text-red-600 hover:text-red-700"
         >
-          ×
+          x
         </button>
 
         {children}

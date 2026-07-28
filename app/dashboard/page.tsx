@@ -6,7 +6,8 @@ import DashboardHeader from "../../components/dashboard/DashboardHeader";
 import RecentWorkReports from "@/components/dashboard/RecentWorkReports";
 import TasksPanel from "@/components/dashboard/TasksPanel";
 import Modal from "@/components/Modal";
-import CreateJobModal from "@/components/CreateJobModal";
+import CreateJobModal from "@/components/createJobModal";
+
 export default function Dashboard() {
   const [showJobModal, setShowJobModal] = useState(false);
 
