@@ -1,6 +1,17 @@
 "use client";
 
-import type { Dispatch, SetStateAction, ReactNode } from "react";
+import { type Dispatch, type SetStateAction, type ReactNode } from "react";
+
+import { CalendarIcon } from "lucide-react";
+
+import { Button } from "@/components/ui/button";
+import { format } from "date-fns";
+import { Calendar } from "@/components/ui/calendar";
+import {
+  Popover,
+  PopoverContent,
+  PopoverTrigger,
+} from "@/components/ui/popover";
 
 import type {
   EWRFormData,
@@ -232,8 +243,8 @@ export default function EWRForm({ formData, setFormData }: EWRFormProps) {
       className="mx-auto w-full max-w-4xl space-y-7"
     >
       <section className="space-y-3">
-        <div className="grid grid-cols-1 gap-4 md:grid-cols-3">
-          <Field label="To:">
+        <div className="grid grid-cols-1 gap-8 md:grid-cols-5">
+          <Field label="To:" className="col-span-3">
             <input
               value={formData.recipient}
               onChange={(event) =>
@@ -254,12 +265,41 @@ export default function EWRForm({ formData, setFormData }: EWRFormProps) {
           </Field>
 
           <Field label="Date:">
-            <input
-              type="date"
-              value={formData.date}
-              onChange={(event) => updateMainField("date", event.target.value)}
-              className={inputClassName}
-            />
+            <Popover>
+              <PopoverTrigger>
+                <Button
+                  type="button"
+                  variant="outline"
+                  className="h-10 w-full justify-between rounded-md border-2 border-black px-3 text-base "
+                >
+                  {formData.date
+                    ? format(
+                        new Date(`${formData.date}T00:00:00`),
+                        "MMM dd, yyyy",
+                      )
+                    : "Pick a date"}
+
+                  <CalendarIcon className="h-5 w-5 opacity-70" />
+                </Button>
+              </PopoverTrigger>
+
+              <PopoverContent className="w-auto p-0 bg-white" align="start">
+                <Calendar
+                  mode="single"
+                  selected={
+                    formData.date
+                      ? new Date(`${formData.date}T00:00:00`)
+                      : undefined
+                  }
+                  onSelect={(selectedDate) => {
+                    updateMainField(
+                      "date",
+                      selectedDate ? format(selectedDate, "yyyy-MM-dd") : "",
+                    );
+                  }}
+                />
+              </PopoverContent>
+            </Popover>
           </Field>
         </div>
 

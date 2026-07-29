@@ -1,4 +1,8 @@
 @import "tailwindcss";
+@import "tw-animate-css";
+@import "shadcn/tailwind.css";
+
+@custom-variant dark (&:is(.dark *));
 
 @theme {
   --font-display: var(--font-cal-sans);
@@ -21,4 +25,74 @@
 
 .search-input {
   @apply border-3 border-black rounded-md px-4 py-1 text-gray-500;
+}
+
+#ewr-print-area {
+  font-family: Arial, Helvetica, sans-serif;
+}
+
+@media print {
+  @page {
+    size: letter portrait;
+    margin: 0;
+  }
+
+  html,
+  body {
+    width: 8.5in;
+    height: 11in;
+    margin: 0;
+    padding: 0;
+    overflow: hidden;
+    background: white;
+  }
+
+  body * {
+    visibility: hidden;
+    font-family: Arial, Helvetica, sans-serif;
+  }
+
+  #ewr-print-area,
+  #ewr-print-area * {
+    visibility: visible;
+  }
+
+  #ewr-print-area {
+    position: fixed;
+    inset: 0;
+
+    width: 8.5in;
+    height: 11in;
+
+    margin: 0;
+    padding: 0;
+
+    overflow: hidden;
+    background: white;
+  }
+
+  #ewr-preview {
+    width: 8.5in;
+    height: 11in;
+
+    margin: 0;
+    padding: 0;
+
+    border: 0;
+    border-radius: 0;
+    box-shadow: none;
+
+    overflow: hidden;
+
+    break-before: avoid;
+    break-after: avoid;
+    break-inside: avoid;
+
+    page-break-before: avoid;
+    page-break-after: avoid;
+    page-break-inside: avoid;
+
+    print-color-adjust: exact;
+    -webkit-print-color-adjust: exact;
+  }
 }
