@@ -39,17 +39,29 @@ export default function CreateTaskModal({ onClose }: Props) {
           <Popover>
             <PopoverTrigger>
               <Button
+                type="button"
                 variant="outline"
-                className="w-full justify-between rounded-md border-[3px] border-black py-6 text-xl font-normal"
+                className="h-12.5 w-[200] justify-between whitespace-nowrap rounded-md border-[3px] border-black px-3 py-0 text-base font-normal"
               >
-                {date ? format(date, "MMM dd, yyyy") : "Pick a date"}
+                <span>
+                  {date ? format(date, "MMM dd, yyyy") : "Pick a date"}
+                </span>
 
-                <CalendarIcon className="h-5 w-5 opacity-70" />
+                <CalendarIcon className="h-5 w-5 shrink-0 opacity-70" />
               </Button>
             </PopoverTrigger>
 
-            <PopoverContent className="w-auto p-0">
-              <Calendar mode="single" selected={date} onSelect={setDate} />
+            <PopoverContent
+              align="end"
+              sideOffset={8}
+              className="z-[100] w-auto rounded-md border border-zinc-200 bg-white p-0 shadow-lg"
+            >
+              <Calendar
+                mode="single"
+                selected={date}
+                onSelect={setDate}
+                className="w-auto p-3 text-sm"
+              />
             </PopoverContent>
           </Popover>
         </div>

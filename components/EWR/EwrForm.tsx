@@ -45,6 +45,11 @@ const inputClassName =
 const compactInputClassName =
   "h-9 w-full rounded-md border-2 border-black bg-white px-2 text-sm outline-none transition focus:border-park-green focus:ring-2 focus:ring-green-100";
 
+const labourGrid = "md:grid-cols-[minmax(150px,2fr)_90px_90px_110px_40px]";
+
+const equipmentGrid =
+  "md:grid-cols-[minmax(150px,2fr)_90px_90px_90px_110px_40px]";
+
 function SectionHeader({ title, onAdd }: SectionHeaderProps) {
   return (
     <div className="flex h-10 items-center justify-between rounded-md bg-park-green">
@@ -230,7 +235,8 @@ export default function EWRForm({ formData, setFormData }: EWRFormProps) {
         {
           id: createId(),
           name: "",
-          markup: "10",
+          cost: "",
+          markup: "",
           amount: "",
         },
       ],
@@ -243,7 +249,7 @@ export default function EWRForm({ formData, setFormData }: EWRFormProps) {
       className="mx-auto w-full max-w-4xl space-y-7"
     >
       <section className="space-y-3">
-        <div className="grid grid-cols-1 gap-8 md:grid-cols-5">
+        <div className="grid grid-cols-1 gap-6 md:grid-cols-5">
           <Field label="To:" className="col-span-3">
             <input
               value={formData.recipient}
@@ -326,18 +332,19 @@ export default function EWRForm({ formData, setFormData }: EWRFormProps) {
         <SectionHeader title="Labour" onAdd={addLabourRow} />
 
         <div className="space-y-3">
-          <div className="hidden grid-cols-[minmax(150px,2fr)_90px_90px_110px_40px] gap-4 px-3 text-center font-semibold underline md:grid">
-            <span>Classification</span>
-            <span>Hours</span>
-            <span>Rate</span>
-            <span>Amount</span>
-            <span />
+          <div
+            className={`hidden md:grid ${labourGrid} gap-3 font-bold underline`}
+          >
+            <span className="text-left pl-1">Classification</span>
+            <span className="text-center ">Hours</span>
+            <span className="text-center ">Rate</span>
+            <span className="text-center ">Amount</span>
           </div>
 
           {formData.labour.map((row) => (
             <div
               key={row.id}
-              className="grid grid-cols-1 items-end gap-3 rounded-md border border-zinc-200 p-3 md:grid-cols-[minmax(150px,2fr)_90px_90px_110px_40px] md:border-0 md:p-0"
+              className={`grid grid-cols-1 items-center gap-3 rounded-md border border-zinc-200 p-3 ${labourGrid} md:border-0 md:p-0`}
             >
               <Field label="Classification" className="md:[&>span]:hidden">
                 <input
@@ -359,9 +366,13 @@ export default function EWRForm({ formData, setFormData }: EWRFormProps) {
                   min="0"
                   step="0.25"
                   value={row.hours}
-                  onChange={(event) =>
-                    updateLabourRow(row.id, "hours", event.target.value)
-                  }
+                  onChange={(event) => {
+                    let value = event.target.value;
+
+                    // Remove everything except digits and one decimal point
+                    value = value.replace(/[^\d.]/g, "");
+                    updateLabourRow(row.id, "hours", event.target.value);
+                  }}
                   className={compactInputClassName}
                 />
               </Field>
@@ -379,7 +390,7 @@ export default function EWRForm({ formData, setFormData }: EWRFormProps) {
                 />
               </Field>
 
-              <div className="flex h-9 items-center md:justify-center">
+              <div className="text-center">
                 <CurrencyAmount amount={calculateAmount(row.hours, row.rate)} />
               </div>
 
@@ -396,19 +407,21 @@ export default function EWRForm({ formData, setFormData }: EWRFormProps) {
         />
 
         <div className="space-y-3">
-          <div className="hidden grid-cols-[minmax(130px,1.8fr)_90px_80px_80px_110px_40px] gap-3 px-2 text-center font-semibold underline md:grid">
-            <span>Name</span>
-            <span>Unit No.</span>
-            <span>Hours</span>
-            <span>Rate</span>
-            <span>Amount</span>
+          <div
+            className={`hidden md:grid ${equipmentGrid} gap-3 font-bold underline`}
+          >
+            <span className="text-left  pl-1">Name</span>
+            <span className="text-center">Unit No.</span>
+            <span className="text-center">Hours</span>
+            <span className="text-center">Rate</span>
+            <span className="text-center">Amount</span>
             <span />
           </div>
 
           {formData.equipment.map((row) => (
             <div
               key={row.id}
-              className="grid grid-cols-1 items-end gap-3 rounded-md border border-zinc-200 p-3 md:grid-cols-[minmax(130px,1.8fr)_90px_80px_80px_110px_40px] md:border-0 md:p-0"
+              className={`grid grid-cols-1 items-center gap-3 rounded-md border border-zinc-200 p-3 ${equipmentGrid} md:border-0 md:p-0`}
             >
               <Field label="Name" className="md:[&>span]:hidden">
                 <input
@@ -436,9 +449,13 @@ export default function EWRForm({ formData, setFormData }: EWRFormProps) {
                   min="0"
                   step="0.25"
                   value={row.hours}
-                  onChange={(event) =>
-                    updateEquipmentRow(row.id, "hours", event.target.value)
-                  }
+                  onChange={(event) => {
+                    let value = event.target.value;
+
+                    // Remove everything except digits and one decimal point
+                    value = value.replace(/[^\d.]/g, "");
+                    updateEquipmentRow(row.id, "hours", event.target.value);
+                  }}
                   className={compactInputClassName}
                 />
               </Field>
@@ -456,7 +473,7 @@ export default function EWRForm({ formData, setFormData }: EWRFormProps) {
                 />
               </Field>
 
-              <div className="flex h-9 items-center md:justify-center">
+              <div className="text-center">
                 <CurrencyAmount amount={calculateAmount(row.hours, row.rate)} />
               </div>
 
@@ -470,19 +487,21 @@ export default function EWRForm({ formData, setFormData }: EWRFormProps) {
         <SectionHeader title="Materials" onAdd={addMaterialRow} />
 
         <div className="space-y-3">
-          <div className="hidden grid-cols-[minmax(130px,1.8fr)_80px_80px_80px_110px_40px] gap-3 px-2 text-center font-semibold underline md:grid">
-            <span>Name</span>
-            <span>Unit</span>
-            <span>Quantity</span>
-            <span>Price</span>
-            <span>Amount</span>
+          <div
+            className={`hidden md:grid ${equipmentGrid} gap-3 font-bold underline`}
+          >
+            <span className="text-left pl-1">Name</span>
+            <span className="text-center">Unit</span>
+            <span className="text-center">Quantity</span>
+            <span className="text-center">Price</span>
+            <span className="text-center">Amount</span>
             <span />
           </div>
 
           {formData.materials.map((row) => (
             <div
               key={row.id}
-              className="grid grid-cols-1 items-end gap-3 rounded-md border border-zinc-200 p-3 md:grid-cols-[minmax(130px,1.8fr)_80px_80px_80px_110px_40px] md:border-0 md:p-0"
+              className={`grid grid-cols-1 items-center gap-3 rounded-md border border-zinc-200 p-3 ${equipmentGrid} md:border-0 md:p-0`}
             >
               <Field label="Name" className="md:[&>span]:hidden">
                 <input
@@ -546,15 +565,17 @@ export default function EWRForm({ formData, setFormData }: EWRFormProps) {
         <SectionHeader title="Invoices" onAdd={addInvoiceRow} />
 
         <div className="space-y-3">
-          <div className="hidden grid-cols-[minmax(180px,2fr)_110px_130px_40px] gap-4 px-3 text-center font-semibold underline md:grid">
-            <span>Name</span>
-            <span>Markup %</span>
-            <span>Amount</span>
-            <span />
+          <div
+            className={`hidden md:grid ${labourGrid} gap-3 font-bold underline`}
+          >
+            <span className="text-left pl-1">Name</span>
+            <span className="text-center">Cost</span>
+            <span className="text-center">Mark Up %</span>
+            <span className="text-center">Amount</span>
           </div>
 
           {formData.invoices.map((row) => {
-            const baseAmount = Number(row.amount) || 0;
+            const baseAmount = Number(row.cost) || 0;
 
             const markup = Number(row.markup) || 0;
 
@@ -563,7 +584,7 @@ export default function EWRForm({ formData, setFormData }: EWRFormProps) {
             return (
               <div
                 key={row.id}
-                className="grid grid-cols-1 items-end gap-3 rounded-md border border-zinc-200 p-3 md:grid-cols-[minmax(180px,2fr)_110px_130px_40px] md:border-0 md:p-0"
+                className={`grid grid-cols-1 items-center gap-3 rounded-md border border-zinc-200 p-3 ${labourGrid} md:border-0 md:p-0`}
               >
                 <Field label="Name" className="md:[&>span]:hidden">
                   <input
@@ -575,11 +596,40 @@ export default function EWRForm({ formData, setFormData }: EWRFormProps) {
                   />
                 </Field>
 
+                <Field label="Cost" className="md:[&>span]:hidden">
+                  <input
+                    type="text"
+                    inputMode="decimal"
+                    placeholder="0.00"
+                    value={row.cost}
+                    onChange={(event) => {
+                      let value = event.target.value;
+
+                      // Remove everything except digits and one decimal point
+                      value = value.replace(/[^\d.]/g, "");
+
+                      // Allow only one decimal point
+                      const parts = value.split(".");
+                      if (parts.length > 2) {
+                        value = `${parts[0]}.${parts.slice(1).join("")}`;
+                      }
+
+                      // Limit to 2 decimal places
+                      if (parts[1]) {
+                        value = `${parts[0]}.${parts[1].slice(0, 2)}`;
+                      }
+
+                      updateInvoiceRow(row.id, "cost", value);
+                    }}
+                    className={compactInputClassName}
+                  />
+                </Field>
+
                 <Field label="Markup %" className="md:[&>span]:hidden">
                   <input
                     type="number"
                     min="0"
-                    step="0.01"
+                    step="1"
                     value={row.markup}
                     onChange={(event) =>
                       updateInvoiceRow(row.id, "markup", event.target.value)
@@ -587,25 +637,11 @@ export default function EWRForm({ formData, setFormData }: EWRFormProps) {
                     className={compactInputClassName}
                   />
                 </Field>
-
-                <Field label="Amount" className="md:[&>span]:hidden">
-                  <div className="flex items-center gap-2">
-                    <input
-                      type="number"
-                      min="0"
-                      step="0.01"
-                      value={row.amount}
-                      onChange={(event) =>
-                        updateInvoiceRow(row.id, "amount", event.target.value)
-                      }
-                      className={compactInputClassName}
-                    />
-                  </div>
-
-                  <p className="mt-1 text-sm font-semibold text-park-green">
-                    Total: ${total.toFixed(2)}
-                  </p>
-                </Field>
+                <div className="text-center">
+                  <span className="whitespace-nowrap text-base font-semibold text-park-green">
+                    ${total.toFixed(2)}
+                  </span>
+                </div>
 
                 <RemoveButton onClick={() => removeRow("invoices", row.id)} />
               </div>

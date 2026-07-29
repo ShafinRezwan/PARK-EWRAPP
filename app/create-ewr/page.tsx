@@ -89,8 +89,8 @@ const initialFormData: EWRFormData = {
     {
       id: createId(),
       name: "",
+      cost: "",
       markup: "10",
-      amount: "",
     },
   ],
 };

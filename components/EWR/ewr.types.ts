@@ -24,8 +24,8 @@ export type MaterialFormRow = {
 export type InvoiceFormRow = {
   id: string;
   name: string;
+  cost: string;
   markup: string;
-  amount: string;
 };
 
 export type EWRFormData = {
