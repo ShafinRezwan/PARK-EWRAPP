@@ -1,11 +1,12 @@
 "use client";
 
 import React from "react";
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import Sidebar from "@/components/sidebar";
 import EWRForm from "@/components/EWR/EwrForm";
 import EWRPreview from "@/components/EWR/EwrPreview";
 import type { EWRFormData } from "@/components/EWR/ewr.types";
+import { useSearchParams } from "next/navigation";
 
 const createId = () => crypto.randomUUID();
 
@@ -97,6 +98,22 @@ const initialFormData: EWRFormData = {
 
 export default function CreateEWR() {
   const [formData, setFormData] = useState<EWRFormData>(initialFormData);
+  const searchParams = useSearchParams();
+
+  useEffect(() => {
+    const recipient = searchParams.get("to") ?? "";
+    const jobNumber = searchParams.get("jobNumber") ?? "";
+    const jobName = searchParams.get("jobName") ?? "";
+    const date = searchParams.get("date") ?? "";
+
+    setFormData((currentData) => ({
+      ...currentData,
+      recipient,
+      jobNumber,
+      jobName,
+      date,
+    }));
+  }, [searchParams]);
 
   return (
     <main className="flex min-h-screen">

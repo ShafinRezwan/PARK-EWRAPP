@@ -9,8 +9,7 @@ type SidebarProps = {
 
 const navItems = [
   { label: "Dashboard", href: "/dashboard" },
-  { label: "Jobs", href: "/jobs" },
-  { label: "Work Reports", href: "/reports" },
+  { label: "Work Reports", href: "/work-reports" },
   { label: "Create EWR", href: "/create-ewr" },
   { label: "Rate Guide", href: "/rate-guide" },
 ];
