@@ -1,7 +1,7 @@
 "use client";
 
 import Image from "next/image";
-import type { EWRFormData } from "./ewr.types";
+import type { EWRFormData } from "../../types/ewr.types";
 
 type EWRPreviewProps = {
   formData: EWRFormData;
@@ -78,7 +78,7 @@ export default function EWRPreview({ formData }: EWRPreviewProps) {
       <div id="ewr-print-area">
         <article
           id="ewr-preview"
-          className="mx-auto aspect-[8.5/11] w-full  overflow-auto border border-black bg-white text-black"
+          className="mx-auto aspect-8.5/11 w-full  overflow-auto border border-black bg-white text-black"
         >
           <div className="flex h-full flex-col px-[4.5%] py-[4%]">
             {/* Main document border */}
@@ -341,11 +341,11 @@ function ReportSection({
 
       {/* Total row */}
       <div className={`grid h-10  text-[8px] font-bold uppercase ${columns}`}>
-        <div className="[grid-column:1/-2] flex items-center justify-end  px-2 ">
+        <div className="col-[1/-2] flex items-center justify-end  px-2 ">
           {totalLabel}
         </div>
 
-        <div className="[grid-column:-2/-1] flex items-center justify-end px-2 ">
+        <div className="col-[-2/-1] flex items-center justify-end px-2 ">
           {moneyFormatter.format(total)}
         </div>
       </div>

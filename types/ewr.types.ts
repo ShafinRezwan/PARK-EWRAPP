@@ -39,3 +39,16 @@ export type EWRFormData = {
   materials: MaterialFormRow[];
   invoices: InvoiceFormRow[];
 };
+
+export type WorkReports = {
+  id: number;
+  jobNumber: string;
+  jobName: string;
+  ewrNumber: string;
+  dateOfWork: string;
+  status: "Sent" | "Pending";
+  divisionCode: string;
+  year: string;
+};
+
+export const divisions = ["All", "01", "03", "09", "10", "41", "42", "43", "90"];

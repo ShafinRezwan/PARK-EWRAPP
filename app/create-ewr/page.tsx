@@ -5,7 +5,7 @@ import { useState, useEffect } from "react";
 import Sidebar from "@/components/sidebar";
 import EWRForm from "@/components/EWR/EwrForm";
 import EWRPreview from "@/components/EWR/EwrPreview";
-import type { EWRFormData } from "@/components/EWR/ewr.types";
+import type { EWRFormData } from "@/types/ewr.types";
 import { useSearchParams } from "next/navigation";
 
 const createId = () => crypto.randomUUID();

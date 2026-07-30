@@ -1,67 +1,8 @@
 import React from "react";
-
-type WorkReports = {
-  jobNumber: string;
-  jobName: string;
-  ewrNumber: string;
-  dateOfWork: string;
-  status: "Sent" | "Pending";
-};
-
-//Will replace to be dynamic later
-const reports: WorkReports[] = [
-  {
-    jobNumber: "25-050",
-    jobName: "Hillshire West Stage 1",
-    ewrNumber: "9801",
-    dateOfWork: "06/14/2026",
-    status: "Sent",
-  },
-  {
-    jobNumber: "25-042",
-    jobName: "Orchards 44",
-    ewrNumber: "9841",
-    dateOfWork: "05/12/2026",
-    status: "Pending",
-  },
-  {
-    jobNumber: "25-050",
-    jobName: "Hillshire West Stage 1",
-    ewrNumber: "9801",
-    dateOfWork: "06/14/2026",
-    status: "Sent",
-  },
-  {
-    jobNumber: "25-050",
-    jobName: "Hillshire West Stage 1",
-    ewrNumber: "9801",
-    dateOfWork: "06/14/2026",
-    status: "Pending",
-  },
-  {
-    jobNumber: "25-050",
-    jobName: "Hillshire West Stage 1",
-    ewrNumber: "9801",
-    dateOfWork: "06/14/2026",
-    status: "Pending",
-  },
-  {
-    jobNumber: "25-050",
-    jobName: "Hillshire West Stage 1",
-    ewrNumber: "9801",
-    dateOfWork: "06/14/2026",
-    status: "Sent",
-  },
-  {
-    jobNumber: "25-042",
-    jobName: "Orchards 44",
-    ewrNumber: "9841",
-    dateOfWork: "05/12/2026",
-    status: "Pending",
-  },
-];
+import { workReports } from "@/data/workreports-data";
 
 export default function RecentWorkReports() {
+  const reports = workReports;
   return (
     <section className="flex min-h-0 flex-col border-black rounded-md border-[3px] px-4 py-2">
       <h1 className="text-park-green text-3xl mb-4">Recent Work Reports</h1>

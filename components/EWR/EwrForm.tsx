@@ -19,7 +19,7 @@ import type {
   EquipmentFormRow,
   MaterialFormRow,
   InvoiceFormRow,
-} from "./ewr.types.ts";
+} from "../../types/ewr.types.js";
 
 type EWRFormProps = {
   formData: EWRFormData;

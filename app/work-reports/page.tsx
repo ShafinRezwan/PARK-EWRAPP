@@ -69,7 +69,7 @@ export default function Jobs() {
 
         <Button
           type="button"
-          className="fixed -bottom-2 -right-3 flex h-23 w-23 items-center justify-center rounded-full bg-park-green text-4xl opacity-90 text-white shadow-2xl transition-all duration-200 hover:scale-110 hover:opacity-100 hover:bg-park-green-dark active:scale-95 z-50"
+          className="fixed -bottom-2 -right-3 flex h-23 w-23 items-center justify-center rounded-full bg-park-green text-4xl opacity-100 text-white shadow-2xl transition-all duration-300 hover:scale-130  hover:bg-park-green-dark active:scale-95 z-50"
           onClick={() => setShowEWRModal(true)}
         >
           +
