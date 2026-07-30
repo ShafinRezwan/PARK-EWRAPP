@@ -1,6 +1,6 @@
 "use client";
 import PageTransition from "./PageTransition";
-import { useState } from "react";
+import { FormEvent, useState } from "react";
 import { useRouter } from "next/navigation";
 import { format } from "date-fns";
 import { CalendarIcon } from "lucide-react";
@@ -43,6 +43,9 @@ export default function CreateEWRModal({ onClose }: Props) {
   return (
     <PageTransition>
       <form onSubmit={handleSubmit}>
+        <h1 className="text-3xl text-park-green font-bold pb-2 underline  text-center">
+          CREATE EWR
+        </h1>
         <div className="grid grid-cols-6 gap-4">
           <div className="col-span-2">
             <label className="mb-2 block text-2xl font-bold">To:</label>
