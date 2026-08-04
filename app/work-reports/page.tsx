@@ -15,41 +15,6 @@ type WorkReports = {
   jobType: string;
 };
 
-const jobClassifications: WorkReports[] = [
-  {
-    divisionCode: "01",
-    jobType: "Construction",
-  },
-  {
-    divisionCode: "03",
-    jobType: "ARC",
-  },
-  {
-    divisionCode: "09",
-    jobType: "Trucking",
-  },
-  {
-    divisionCode: "10",
-    jobType: "Snow Removal",
-  },
-  {
-    divisionCode: "41",
-    jobType: "Underground",
-  },
-  {
-    divisionCode: "42",
-    jobType: "Excavation",
-  },
-  {
-    divisionCode: "43",
-    jobType: "Landscaping",
-  },
-  {
-    divisionCode: "90",
-    jobType: "RCI",
-  },
-];
-
 export default function Jobs() {
   const [showJobModal, setShowJobModal] = useState(false);
   const [showEWRModal, setShowEWRModal] = useState(false);

@@ -52,3 +52,30 @@ export type WorkReports = {
 };
 
 export const divisions = ["All", "01", "03", "09", "10", "41", "42", "43", "90"];
+
+
+export type LabourRates = {
+  id: number;
+  employeeNumber: number;
+  baseWorkClass: string;
+  baseClassName: string;
+  rate: number;
+  saturdayRate: number;
+  sundayRate: number;
+};
+
+export type EquipmentRates = {
+  id: number;
+  equipmentNumber: number;
+  makeModelYear: string;
+  description: string;
+  rate: string;
+  horsePower: string;
+};
+
+export type MaterialRates = {
+  id: number;
+  description: string;
+  unit: string;
+  rate: string;
+};
