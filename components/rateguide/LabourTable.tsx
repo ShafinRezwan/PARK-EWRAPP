@@ -20,7 +20,7 @@ export default function LabourTable({ labourRates }: Props) {
   return (
     <>
       <PageTransition>
-        <table className="w-full border-collapse  text-left ">
+        <table className="w-full border-collapse  text-left overflow-hidden ">
           <thead className="sticky top-0 text-2xl text-park-gray bg-white ">
             <tr>
               <th className="px-3 py-1 text-center underline ">Employee #</th>

@@ -14,6 +14,21 @@ type LabourSpreadsheetRow = {
   "Sunday Rate"?: unknown;
 };
 
+type EquipmentSpreadsheetRow = {
+  "Equipment #"?: unknown;
+  "Make,Model,Year"?: unknown;
+  "Description"?: unknown;
+  "Udf Archa Rate"?: unknown;
+   "HorsePower"?: unknown;
+  
+};
+
+type MaterialSpreadsheetRow = {
+  "Description"?: unknown;
+   "Unit"?: unknown;
+  
+};
+
 export async function POST(request: Request) {
   try {
     const formData = await request.formData();

@@ -32,7 +32,7 @@ export default function RateTable({ labourRates }: Props) {
     useState<(typeof tabs)[number]>("Labour");
 
   return (
-    <section className="flex h-full flex-col overflow-hidden rounded-md border-[3px] border-black">
+    <section className="flex min-h-0 flex-1 flex-col overflow-hidden rounded-md border-[3px] border-black">
       <div className="flex h-24">
         {tabs.map((tab) => (
           <button
@@ -86,7 +86,7 @@ export default function RateTable({ labourRates }: Props) {
         />
       </Modal>
 
-      <div className="mx-2 max-h-400 overflow-y-auto pb-10">
+      <div className="mx-2 min-h-0 flex-1 overflow-y-auto pb-10">
         {selectedTab === "Labour" && <LabourTable labourRates={labourRates} />}
 
         {selectedTab === "Equipment" && <EquipmentTable />}

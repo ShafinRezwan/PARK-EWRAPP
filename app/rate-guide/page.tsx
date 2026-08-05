@@ -17,9 +17,9 @@ export default async function page() {
   }));
 
   return (
-    <main className="flex min-h-screen">
+    <main className="flex h-screen overflow-hidden">
       <Sidebar />
-      <section className="flex min-w-0 flex-1 flex-col  p-7 mx-2">
+      <section className="flex min-h-0 flex-1 flex-col gap-4 p-7 mx-2 ">
         <RateTable labourRates={labourRates} />
       </section>
     </main>
