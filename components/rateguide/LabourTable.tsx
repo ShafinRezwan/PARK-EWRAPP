@@ -1,8 +1,22 @@
 import React from "react";
-import { labourRates } from "@/data/ratetable-data";
 import PageTransition from "@/components/PageTransition";
+import { getLabourRates } from "@/lib/rates";
 
-export default function LabourTable() {
+type LabourRate = {
+  id: string;
+  employeeNumber: number;
+  baseWorkClass: string;
+  baseClassName: string;
+  rate: number;
+  saturdayRate: number;
+  sundayRate: number;
+};
+
+type Props = {
+  labourRates: LabourRate[];
+};
+
+export default function LabourTable({ labourRates }: Props) {
   return (
     <>
       <PageTransition>
@@ -36,9 +50,13 @@ export default function LabourTable() {
                   {labour.baseClassName}
                 </td>
 
-                <td className="px-3 py-3 text-center">{labour.rate}</td>
-                <td className="px-3 py-3 text-center">{labour.saturdayRate}</td>
-                <td className="px-3 py-3 text-center">{labour.sundayRate}</td>
+                <td className="px-3 py-3 text-center">{"$" + labour.rate}</td>
+                <td className="px-3 py-3 text-center">
+                  {"$" + labour.saturdayRate}
+                </td>
+                <td className="px-3 py-3 text-center">
+                  {"$" + labour.sundayRate}
+                </td>
               </tr>
             ))}
           </tbody>

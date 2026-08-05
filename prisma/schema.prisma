@@ -13,24 +13,19 @@ enum Role {
   SUPERINTENDENT
   ACCOUNTING
   PROJECT_MANAGER
+  MASTER_USER
 }
 
 enum ReportStatus {
   DRAFT
   PENDING_APPROVAL
+  NEEDS_REVISION
   APPROVED
-  REJECTED
 }
 
 enum TaskStatus {
   PENDING
   COMPLETED
-}
-
-enum AttachmentType {
-  PHOTO
-  RECEIPT
-  DOCUMENT
 }
 
 model User {
@@ -43,92 +38,195 @@ model User {
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
-  createdTasks   ToDoTask[]        @relation("TaskCreator")
-  assignedTasks  ToDoTask[]        @relation("TaskAssignee")
-  createdReports ExtraWorkReport[] @relation("ReportCreator")
+  createdTasks  ToDoTask[] @relation("TaskCreator")
+  assignedTasks ToDoTask[] @relation("TaskAssignee")
+
+  extraWorkReports ExtraWorkReport[]
+}
+
+model ToDoTask {
+  id      String     @id @default(cuid())
+  task    String
+  duedate DateTime
+  status  TaskStatus @default(PENDING)
+
+  jobId       String?
+  job         Job?    @relation(fields: [jobId], references: [id], onDelete: SetNull)
+  createdById String
+  createdBy   User    @relation("TaskCreator", fields: [createdById], references: [id], onDelete: Restrict)
+
+  assignedToId String?
+  assignedTo   User?   @relation("TaskAssignee", fields: [assignedToId], references: [id], onDelete: SetNull)
+
+  @@index([jobId])
+  @@index([createdById])
+  @@index([assignedToId])
+  @@index([status])
 }
 
 model Job {
-  id                    String              @id @default(cuid())
-  jobNumber             String              @unique
-  jobName               String
-  divison               String
-  year                  Int
-  customerName          String?
-  projectSuperIntendent String?
-  createdAt             DateTime            @default(now())
-  extraWorkReports      Extra_Work_Report[]
-  tasks                 ToDoTask[]
+  id        String @id @default(cuid())
+  jobNumber String @unique
+  jobName   String
+  division  String
+  year      Int
+
+  extraWorkReports ExtraWorkReport[]
+  tasks            ToDoTask[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 
   @@index([division])
   @@index([year])
+  @@index([division, year])
 }
 
-model Employee {
-  id             String   @id @default(cuid())
-  employeeNumber String   @unique
-  firstName      String?
-  lastName       String?
-  role           String
-  baseCode       String
-  regularRate    Float
-  saturdayRate   Float
-  sundayRate     Float
-  createdAt      DateTime @default(now())
-  updatedAt      DateTime @updatedAt
-}
-
-model Equipment {
-  id            String   @id @default(cuid())
-  equipmentCode String
-  equipmentName String
-  equipmentType String
-  equipmentRate Float
-  createdAt     DateTime @default(now())
-  updatedAt     DateTime @updatedAt
-}
-
-model Material {
-  id           String @id @default(cuid())
-  materialType String
-  materialUnit String
-  quantity     Float
-}
-
-model Invoice {
-  id            String @id @default(cuid())
-  invoiceType   String
-  invoiceAmount Float
-  invoiceMarkup Float
-}
-
-model attachment {
-  id         String   @id @default(cuid())
-  reportID   String
-  fileName   String
-  fileUrl    String
-  uploadedAt DateTime @default(now())
-}
-
-model Extra_Work_Report {
-  id          String   @id @default(cuid())
-  ewrNumber   String   @unique
+model ExtraWorkReport {
+  id          String       @id @default(cuid())
+  jobId       String?
+  job         Job?         @relation(fields: [jobId], references: [id], onDelete: Restrict)
+  ewrNumber   String       @unique
   workDate    DateTime
   recipent    String?
   description String
-  job         Job?     @relation(fields: [jobId], references: [id])
-  jobId       String?
+  status      ReportStatus @default(DRAFT)
 
-  labourEntries    LabourEntry[]
-  equipmentEntries EquipmentEntry[]
-  materialEntries  MaterialEntry[]
-  invoices         Invoice[]
-  attachments      Attachment[]
+  labourEntries    EWRLabourRow[]
+  equipmentEntries EWREquipmentRow[]
+  materialEntries  EWRMaterialRow[]
+  invoices         EWRInvoiceRow[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  users     User[]
 
   @@index([jobId])
   @@index([status])
   @@index([workDate])
 }
 
-model To_Do_Task {
+model LabourRate {
+  id             String   @id @default(cuid())
+  employeeNumber Int      @unique
+  baseWorkClass  String
+  baseClassName  String
+  rate           Decimal  @db.Decimal(10, 2)
+  saturdayRate   Decimal  @db.Decimal(10, 2)
+  sundayRate     Decimal  @db.Decimal(10, 2)
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+
+  @@index([baseWorkClass])
+  @@index([baseClassName])
+}
+
+model EquipmentRate {
+  id              String   @id @default(cuid())
+  equipmentNumber String   @unique
+  makeModelYear   String
+  description     String
+  equipmentRate   Decimal  @db.Decimal(10, 2)
+  horsePower      Int
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+
+  @@index([description])
+}
+
+model MaterialRate {
+  id           String @id @default(cuid())
+  materialType String
+  materialUnit String
+
+  @@unique([materialType, materialUnit])
+  @@index([materialType])
+}
+
+model Invoice {
+  id            String      @id @default(cuid())
+  invoiceType   String
+  invoiceAmount Float
+  invoiceMarkup Float
+  attachment    Attachment? @relation(fields: [attachmentId], references: [id])
+  attachmentId  String?
+}
+
+model Attachment {
+  id       String @id @default(cuid())
+  fileName String
+  fileType String
+  fileSize Int?
+  fileUrl  String
+
+  reportID   String
+  uploadedAt DateTime      @default(now())
+  invoiceId  String        @unique
+  invoice    EWRInvoiceRow @relation(fields: [invoiceId], references: [id], onDelete: Cascade)
+
+  invoices Invoice[]
+}
+
+model EWRLabourRow {
+  id             String  @id @default(cuid())
+  employeeNumber Int?
+  classification String
+  hours          Float
+  Rate           Decimal @db.Decimal(10, 2)
+  Amount         Decimal @db.Decimal(10, 2)
+
+  reportId  String
+  report    ExtraWorkReport @relation(fields: [reportId], references: [id], onDelete: Cascade)
+  createdAt DateTime        @default(now())
+
+  @@index([reportId])
+}
+
+model EWREquipmentRow {
+  id         String  @id @default(cuid())
+  name       String
+  unitNumber String
+  hours      Float
+  rate       Decimal @db.Decimal(10, 2)
+  amount     Decimal @db.Decimal(10, 2)
+
+  reportId String
+  report   ExtraWorkReport @relation(fields: [reportId], references: [id], onDelete: Cascade)
+
+  createdAt DateTime @default(now())
+
+  @@index([reportId])
+}
+
+model EWRMaterialRow {
+  id String @id @default(cuid())
+
+  name     String
+  unit     String
+  quantity Decimal @db.Decimal(10, 2)
+  price    Decimal @db.Decimal(10, 2)
+  amount   Decimal @db.Decimal(10, 2)
+
+  reportId  String
+  report    ExtraWorkReport @relation(fields: [reportId], references: [id], onDelete: Cascade)
+  createdAt DateTime        @default(now())
+
+  @@index([reportId])
+}
+
+model EWRInvoiceRow {
+  id String @id @default(cuid())
+
+  name         String
+  cost         Decimal @db.Decimal(10, 2)
+  markup       Float
+  attachmentId String?
+
+  attachment Attachment?
+  reportId   String
+  report     ExtraWorkReport @relation(fields: [reportId], references: [id], onDelete: Cascade)
+
+  createdAt DateTime @default(now())
+
+  @@index([reportId])
 }

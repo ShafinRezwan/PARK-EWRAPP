@@ -1,7 +1,7 @@
 "use client";
-import PageTransition from "../PageTransition";
 
-import { FormEvent, useState, useRef } from "react";
+import { FormEvent, useRef, useState } from "react";
+import { useRouter } from "next/navigation";
 
 type Props = {
   onClose: () => void;
@@ -9,70 +9,100 @@ type Props = {
 };
 
 export default function CreateUploadDataModal({ onClose, category }: Props) {
-  const [file, setFile] = useState<File | null>(null);
+  const router = useRouter();
   const fileInputRef = useRef<HTMLInputElement>(null);
-  const [status, setStatus] = useState<string>("");
 
-  function chooseFile() {
-    fileInputRef.current?.click();
-  }
+  const [selectedFile, setSelectedFile] = useState<File | null>(null);
+  const [status, setStatus] = useState("");
+  const [isUploading, setIsUploading] = useState(false);
 
-  const handleFileChange = async (
-    event: React.ChangeEvent<HTMLInputElement>,
-  ) => {
-    const file = event.target.files?.[0];
-    if (!file) return;
+  async function handleSubmit(event: FormEvent<HTMLFormElement>) {
+    event.preventDefault();
 
+    if (!selectedFile) {
+      setStatus("Choose a file first.");
+      return;
+    }
+
+    setIsUploading(true);
     setStatus("Uploading...");
 
-    setFile(file);
-  };
+    try {
+      const formData = new FormData();
 
-  async function handleSubmit() {
-    if (!file) return;
+      formData.append("file", selectedFile);
+      formData.append("category", category);
 
-    const formData = new FormData();
-    formData.append("file", file);
+      const response = await fetch("/api/rates/upload", {
+        method: "POST",
+        body: formData,
+      });
 
-    // Upload here
+      const result = await response.json();
 
-    onClose();
+      if (!response.ok) {
+        throw new Error(result.error ?? "Upload failed.");
+      }
+
+      setStatus(result.message);
+
+      router.refresh();
+
+      setTimeout(() => {
+        onClose();
+      }, 700);
+    } catch (error) {
+      setStatus(
+        error instanceof Error
+          ? error.message
+          : "The file could not be uploaded.",
+      );
+    } finally {
+      setIsUploading(false);
+    }
   }
 
   return (
-    <PageTransition>
-      <form onSubmit={handleSubmit}>
-        <h1 className="text-3xl text-park-green font-bold  text-left">
-          Upload/Update Data for: <span className="text-black">{category}</span>
-        </h1>
-        <div className="mt-3">
-          <input
-            ref={fileInputRef}
-            type="file"
-            className="hidden"
-            accept=".xlsx,.xls,.csv"
-            onChange={handleFileChange}
-          />{" "}
-          <button
-            type="button"
-            onClick={chooseFile}
-            className="flex h-16 w-full cursor-pointer items-center justify-center rounded-md border-[3px] border-black text-2xl font-semibold hover:bg-gray-100"
-          >
-            {file ? file.name : "Choose File"}
-          </button>
-        </div>
+    <form onSubmit={handleSubmit}>
+      <h1 className="text-center text-3xl font-bold">
+        Upload/Update Data for:{" "}
+        <span className="text-park-green">{category}</span>
+      </h1>
 
-        <div className="mt-4 flex justify-center">
-          <button
-            type="button"
-            onClick={handleSubmit}
-            disabled={!file}
-            className="w-full cursor-pointer rounded-md bg-park-green px-20 py-3 text-2xl text-white transition-all duration-300 hover:bg-park-green-dark"
-          >
-            Submit
-          </button>
-        </div>
-      </form>
-    </PageTransition>
+      <input
+        ref={fileInputRef}
+        type="file"
+        accept=".xlsx,.xls,.csv"
+        className="hidden"
+        onChange={(event) => {
+          const file = event.target.files?.[0];
+
+          if (file) {
+            setSelectedFile(file);
+            setStatus("");
+          }
+        }}
+      />
+
+      <button
+        type="button"
+        onClick={() => fileInputRef.current?.click()}
+        className="mt-8 w-full rounded-md border-[3px] border-black px-4 py-4 text-xl"
+      >
+        {selectedFile?.name ?? "Choose File"}
+      </button>
+
+      {status && (
+        <p className="mt-3 text-center text-sm text-park-gray">{status}</p>
+      )}
+
+      <button
+        type="submit"
+        disabled={!selectedFile || isUploading}
+        className="mt-8 w-full rounded-md bg-park-green px-6 py-3 text-2xl text-white disabled:cursor-not-allowed disabled:opacity-50"
+      >
+        {isUploading ? "Uploading..." : "Submit"}
+      </button>
+    </form>
   );
 }

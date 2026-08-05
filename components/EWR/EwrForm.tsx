@@ -19,6 +19,7 @@ import type {
   EquipmentFormRow,
   MaterialFormRow,
   InvoiceFormRow,
+  InvoiceAttachment,
 } from "../../types/ewr.types.js";
 
 type EWRFormProps = {
@@ -159,7 +160,7 @@ export default function EWRForm({ formData, setFormData }: EWRFormProps) {
 
   const updateInvoiceRow = (
     id: string,
-    field: keyof Omit<InvoiceFormRow, "id">,
+    field: keyof Omit<InvoiceFormRow, "id" | "invoiceAttachment">,
     value: string,
   ) => {
     setFormData((current) => ({
@@ -167,6 +168,78 @@ export default function EWRForm({ formData, setFormData }: EWRFormProps) {
       invoices: current.invoices.map((row) =>
         row.id === id ? { ...row, [field]: value } : row,
       ),
+    }));
+  };
+
+  const acceptedInvoiceTypes = [
+    "application/pdf",
+    "image/jpeg",
+    "image/png",
+    "image/webp",
+  ];
+
+  const maximumInvoiceSize = 10 * 1024 * 1024;
+
+  const uploadInvoiceAttachment = (
+    invoiceId: string,
+    file: File | undefined,
+  ) => {
+    if (!file) return;
+
+    if (!acceptedInvoiceTypes.includes(file.type)) {
+      alert("Please upload a PDF, JPG, PNG, or WEBP invoice.");
+      return;
+    }
+
+    if (file.size > maximumInvoiceSize) {
+      alert("The invoice file must be 10 MB or smaller.");
+      return;
+    }
+
+    const attachment: InvoiceAttachment = {
+      id: createId(),
+      file,
+      fileName: file.name,
+      fileType: file.type,
+      previewUrl: URL.createObjectURL(file),
+    };
+
+    setFormData((current): EWRFormData => ({
+      ...current,
+      invoices: current.invoices.map((invoice): InvoiceFormRow => {
+        if (invoice.id !== invoiceId) {
+          return invoice;
+        }
+
+        if (invoice.invoiceAttachment?.previewUrl) {
+          URL.revokeObjectURL(invoice.invoiceAttachment.previewUrl);
+        }
+
+        return {
+          ...invoice,
+          invoiceAttachment: attachment,
+        };
+      }),
+    }));
+  };
+
+  const removeInvoiceAttachment = (invoiceId: string) => {
+    setFormData((current) => ({
+      ...current,
+      invoices: current.invoices.map((invoice) => {
+        if (invoice.id !== invoiceId) {
+          return invoice;
+        }
+
+        if (invoice.invoiceAttachment?.previewUrl) {
+          URL.revokeObjectURL(invoice.invoiceAttachment.previewUrl);
+        }
+
+        return {
+          ...invoice,
+          invoiceAttachment: null,
+        };
+      }),
     }));
   };
 
@@ -238,6 +311,7 @@ export default function EWRForm({ formData, setFormData }: EWRFormProps) {
           cost: "",
           markup: "",
           amount: "",
+          invoiceAttachment: null,
         },
       ],
     }));
@@ -592,6 +666,7 @@ export default function EWRForm({ formData, setFormData }: EWRFormProps) {
                     onChange={(event) =>
                       updateInvoiceRow(row.id, "name", event.target.value)
                     }
+
                     className={compactInputClassName}
                   />
                 </Field>

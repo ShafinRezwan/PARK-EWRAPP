@@ -26,6 +26,16 @@ export type InvoiceFormRow = {
   name: string;
   cost: string;
   markup: string;
+   amount: string;
+  invoiceAttachment: InvoiceAttachment | null;
+};
+
+export type InvoiceAttachment = {
+  id: string;
+  file: File;
+  fileName: string;
+  fileType: string;
+  previewUrl: string;
 };
 
 export type EWRFormData = {
@@ -69,8 +79,8 @@ export type EquipmentRates = {
   equipmentNumber: number;
   makeModelYear: string;
   description: string;
-  rate: string;
-  horsePower: string;
+  rate: number;
+  horsePower: number;
 };
 
 export type MaterialRates = {

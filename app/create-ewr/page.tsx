@@ -92,6 +92,8 @@ const initialFormData: EWRFormData = {
       name: "",
       cost: "",
       markup: "10",
+      amount: "",
+      invoiceAttachment: null,
     },
   ],
 };

@@ -35,7 +35,9 @@ export default function EquipmentTable() {
                   {equipment.description}
                 </td>
 
-                <td className="px-3 py-3 text-center">{equipment.rate}</td>
+                <td className="px-3 py-3 text-center">
+                  {"$" + equipment.rate}
+                </td>
                 <td className="px-3 py-3 text-center">
                   {equipment.horsePower}
                 </td>
