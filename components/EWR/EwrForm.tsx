@@ -1,6 +1,11 @@
 "use client";
 
-import { type Dispatch, type SetStateAction, type ReactNode } from "react";
+import {
+  type Dispatch,
+  type SetStateAction,
+  type ReactNode,
+  useState,
+} from "react";
 
 import { CalendarIcon } from "lucide-react";
 
@@ -22,14 +27,20 @@ import type {
   InvoiceAttachment,
 } from "../../types/ewr.types.js";
 
+import { LabourRate, EquipmentRate, MaterialRate } from "@/lib/rates.js";
+
 type EWRFormProps = {
   formData: EWRFormData;
   setFormData: Dispatch<SetStateAction<EWRFormData>>;
+  labourRates: LabourRate[];
+  equipmentRates: EquipmentRate[];
+  materialRates: MaterialRate[];
 };
 
 type SectionHeaderProps = {
   title: string;
   onAdd: () => void;
+  disabled?: boolean;
 };
 
 type FieldProps = {
@@ -51,7 +62,7 @@ const labourGrid = "md:grid-cols-[minmax(150px,2fr)_90px_90px_110px_40px]";
 const equipmentGrid =
   "md:grid-cols-[minmax(150px,2fr)_90px_90px_90px_110px_40px]";
 
-function SectionHeader({ title, onAdd }: SectionHeaderProps) {
+function SectionHeader({ title, onAdd, disabled = false }: SectionHeaderProps) {
   return (
     <div className="flex h-10 items-center justify-between rounded-md bg-park-green">
       <h2 className="px-3 text-lg font-semibold text-white">{title}</h2>
@@ -59,7 +70,8 @@ function SectionHeader({ title, onAdd }: SectionHeaderProps) {
       <button
         type="button"
         onClick={onAdd}
-        className="h-full rounded-r-md bg-park-green px-6 text-base font-semibold text-white transition hover:bg-park-green-dark"
+        disabled={disabled}
+        className="h-full rounded-r-md bg-park-green px-6 text-base font-semibold text-white transition hover:bg-park-green-dark disabled:cursor-not-allowed disabled:opacity-50"
       >
         Add Row +
       </button>
@@ -105,7 +117,13 @@ function calculateAmount(quantity: string, rate: string) {
   return parsedQuantity * parsedRate;
 }
 
-export default function EWRForm({ formData, setFormData }: EWRFormProps) {
+export default function EWRForm({
+  formData,
+  setFormData,
+  labourRates,
+  equipmentRates,
+  materialRates,
+}: EWRFormProps) {
   const updateMainField = (
     field: keyof Pick<
       EWRFormData,
@@ -243,6 +261,18 @@ export default function EWRForm({ formData, setFormData }: EWRFormProps) {
     }));
   };
 
+  const [openLabourDropdown, setOpenLabourDropdown] = useState<string | null>(
+    null,
+  );
+
+  const [openEquipDropdown, setOpenEquipdDropdown] = useState<string | null>(
+    null,
+  );
+
+  const [openMaterialDropdown, setOpenMaterialDropdown] = useState<
+    string | null
+  >(null);
+
   const removeRow = (
     section: "labour" | "equipment" | "materials" | "invoices",
     id: string,
@@ -253,68 +283,147 @@ export default function EWRForm({ formData, setFormData }: EWRFormProps) {
     }));
   };
 
+  const MAX_LABOUR_ROWS = 14;
+  const MAX_EQUIPMENT_ROWS = 10;
+  const MAX_MATERIAL_ROWS = 6;
+  const MAX_INVOICE_ROWS = 6;
+
   const addLabourRow = () => {
-    setFormData((current) => ({
-      ...current,
-      labour: [
-        ...current.labour,
-        {
-          id: createId(),
-          classification: "",
-          hours: "",
-          rate: "",
-        },
-      ],
-    }));
+    setFormData((current) => {
+      if (current.labour.length >= MAX_LABOUR_ROWS) {
+        return current;
+      }
+
+      return {
+        ...current,
+        labour: [
+          ...current.labour,
+          {
+            id: createId(),
+            classification: "",
+            hours: "",
+            rate: "",
+          },
+        ],
+      };
+    });
+  };
+
+  const getLabourMatches = (searchValue: string) => {
+    const search = searchValue.toLowerCase().trim();
+
+    if (!search) return [];
+
+    return labourRates
+      .filter((worker) => {
+        const employeeNumber = worker.employeeNumber.toString();
+        const workClass = worker.baseWorkClass.toLowerCase();
+        const className = worker.baseClassName.toLowerCase();
+
+        return (
+          employeeNumber.includes(search) ||
+          workClass.includes(search) ||
+          className.includes(search)
+        );
+      })
+      .slice(0, 8);
   };
 
   const addEquipmentRow = () => {
-    setFormData((current) => ({
-      ...current,
-      equipment: [
-        ...current.equipment,
-        {
-          id: createId(),
-          name: "",
-          unitNumber: "",
-          hours: "",
-          rate: "",
-        },
-      ],
-    }));
+    setFormData((current) => {
+      if (current.equipment.length >= MAX_EQUIPMENT_ROWS) {
+        return current;
+      }
+
+      return {
+        ...current,
+        equipment: [
+          ...current.equipment,
+          {
+            id: createId(),
+            name: "",
+            unitNumber: "",
+            hours: "",
+            rate: "",
+          },
+        ],
+      };
+    });
+  };
+
+  const getEquipMatches = (searchValue: string) => {
+    const search = searchValue.toLowerCase().trim();
+
+    if (!search) return [];
+
+    return equipmentRates
+      .filter((equipment) => {
+        return (
+          equipment.equipmentNumber.toString() ||
+          equipment.description.toLowerCase()
+        );
+      })
+      .slice(0, 8);
   };
 
   const addMaterialRow = () => {
-    setFormData((current) => ({
-      ...current,
-      materials: [
-        ...current.materials,
-        {
-          id: createId(),
-          name: "",
-          unit: "",
-          quantity: "",
-          price: "",
-        },
-      ],
-    }));
+    setFormData((current) => {
+      if (current.materials.length >= MAX_MATERIAL_ROWS) {
+        return current;
+      }
+
+      return {
+        ...current,
+        materials: [
+          ...current.materials,
+          {
+            id: createId(),
+            name: "",
+            unit: "",
+            quantity: "",
+            price: "",
+          },
+        ],
+      };
+    });
+  };
+
+  const getMaterialMatches = (searchValue: string) => {
+    const search = searchValue.toLowerCase().trim();
+
+    if (!search) return [];
+
+    return materialRates
+      .filter((material) => {
+        return (
+          material.type.toLowerCase().includes(search) ||
+          material.unit.toLowerCase().includes(search)
+        );
+      })
+      .slice(0, 8);
   };
 
   const addInvoiceRow = () => {
-    setFormData((current) => ({
-      ...current,
-      invoices: [
-        ...current.invoices,
-        {
-          id: createId(),
-          name: "",
-          cost: "",
-          markup: "",
-          amount: "",
-          invoiceAttachment: null,
-        },
-      ],
-    }));
+    setFormData((current) => {
+      if (current.invoices.length >= MAX_INVOICE_ROWS) {
+        return current;
+      }
+
+      return {
+        ...current,
+        invoices: [
+          ...current.invoices,
+          {
+            id: createId(),
+            name: "",
+            cost: "",
+            markup: "10",
+            amount: "",
+            invoiceAttachment: null,
+          },
+        ],
+      };
+    });
   };
 
   return (
@@ -403,7 +512,11 @@ export default function EWRForm({ formData, setFormData }: EWRFormProps) {
       </section>
 
       <section className="space-y-3">
-        <SectionHeader title="Labour" onAdd={addLabourRow} />
+        <SectionHeader
+          title="Labour"
+          onAdd={addLabourRow}
+          disabled={formData.labour.length >= MAX_LABOUR_ROWS}
+        />
 
         <div className="space-y-3">
           <div
@@ -415,62 +528,107 @@ export default function EWRForm({ formData, setFormData }: EWRFormProps) {
             <span className="text-center ">Amount</span>
           </div>
 
-          {formData.labour.map((row) => (
-            <div
-              key={row.id}
-              className={`grid grid-cols-1 items-center gap-3 rounded-md border border-zinc-200 p-3 ${labourGrid} md:border-0 md:p-0`}
-            >
-              <Field label="Classification" className="md:[&>span]:hidden">
-                <input
-                  value={row.classification}
-                  onChange={(event) =>
-                    updateLabourRow(
-                      row.id,
-                      "classification",
-                      event.target.value,
-                    )
-                  }
-                  className={compactInputClassName}
-                />
-              </Field>
+          {formData.labour.map((row) => {
+            const matches = getLabourMatches(row.classification);
 
-              <Field label="Hours" className="md:[&>span]:hidden">
-                <input
-                  type="number"
-                  min="0"
-                  step="0.25"
-                  value={row.hours}
-                  onChange={(event) => {
-                    let value = event.target.value;
+            return (
+              <div
+                key={row.id}
+                className={`grid grid-cols-1 items-center gap-3 rounded-md border border-zinc-200 p-3 ${labourGrid} md:border-0 md:p-0`}
+              >
+                <div className="relative">
+                  <Field label="Classification" className="md:[&>span]:hidden">
+                    <input
+                      value={row.classification}
+                      onFocus={() => setOpenLabourDropdown(row.id)}
+                      onChange={(event) => {
+                        updateLabourRow(
+                          row.id,
+                          "classification",
+                          event.target.value,
+                        );
+                        setOpenLabourDropdown(row.id);
+                      }}
+                      placeholder="Employee #, class, or classification"
+                      className={compactInputClassName}
+                    />
+                  </Field>
 
-                    // Remove everything except digits and one decimal point
-                    value = value.replace(/[^\d.]/g, "");
-                    updateLabourRow(row.id, "hours", event.target.value);
-                  }}
-                  className={compactInputClassName}
-                />
-              </Field>
+                  {openLabourDropdown === row.id &&
+                    row.classification &&
+                    matches.length > 0 && (
+                      <div className="absolute left-0 top-full z-50 mt-1 max-h-60 w-full overflow-y-auto rounded-md border-2 border-black bg-white shadow-lg">
+                        {matches.map((worker) => (
+                          <button
+                            key={worker.id}
+                            type="button"
+                            onClick={() => {
+                              setFormData((current) => ({
+                                ...current,
+                                labour: current.labour.map((labourRow) =>
+                                  labourRow.id === row.id
+                                    ? {
+                                        ...labourRow,
+                                        classification: worker.baseClassName,
+                                        rate: worker.rate.toString(),
+                                      }
+                                    : labourRow,
+                                ),
+                              }));
+                              setOpenLabourDropdown(null);
+                            }}
+                            className="w-full border-b px-3 py-2 text-left transition last:border-b-0 hover:bg-gray-100"
+                          >
+                            <div className="font-semibold">
+                              {worker.baseClassName}
+                            </div>
 
-              <Field label="Rate" className="md:[&>span]:hidden">
-                <input
-                  type="number"
-                  min="0"
-                  step="0.01"
-                  value={row.rate}
-                  onChange={(event) =>
-                    updateLabourRow(row.id, "rate", event.target.value)
-                  }
-                  className={compactInputClassName}
-                />
-              </Field>
+                            <div className="text-sm text-gray-500">
+                              #{worker.employeeNumber} · {worker.baseWorkClass}{" "}
+                              · ${worker.rate.toFixed(2)}
+                            </div>
+                          </button>
+                        ))}
+                      </div>
+                    )}
+                </div>
 
-              <div className="text-center">
-                <CurrencyAmount amount={calculateAmount(row.hours, row.rate)} />
+                <Field label="Hours" className="md:[&>span]:hidden">
+                  <input
+                    type="number"
+                    min="0"
+                    step="0.25"
+                    value={row.hours}
+                    onChange={(event) =>
+                      updateLabourRow(row.id, "hours", event.target.value)
+                    }
+                    className={compactInputClassName}
+                  />
+                </Field>
+
+                <Field label="Rate" className="md:[&>span]:hidden">
+                  <input
+                    type="number"
+                    min="0"
+                    step="0.01"
+                    value={row.rate}
+                    onChange={(event) =>
+                      updateLabourRow(row.id, "rate", event.target.value)
+                    }
+                    className={compactInputClassName}
+                  />
+                </Field>
+
+                <div className="text-center">
+                  <CurrencyAmount
+                    amount={calculateAmount(row.hours, row.rate)}
+                  />
+                </div>
+
+                <RemoveButton onClick={() => removeRow("labour", row.id)} />
               </div>
-
-              <RemoveButton onClick={() => removeRow("labour", row.id)} />
-            </div>
-          ))}
+            );
+          })}
         </div>
       </section>
 
@@ -478,13 +636,14 @@ export default function EWRForm({ formData, setFormData }: EWRFormProps) {
         <SectionHeader
           title="Equipment & Rented Trucks"
           onAdd={addEquipmentRow}
+          disabled={formData.equipment.length >= MAX_EQUIPMENT_ROWS}
         />
 
         <div className="space-y-3">
           <div
             className={`hidden md:grid ${equipmentGrid} gap-3 font-bold underline`}
           >
-            <span className="text-left  pl-1">Name</span>
+            <span className="text-left pl-1">Name</span>
             <span className="text-center">Unit No.</span>
             <span className="text-center">Hours</span>
             <span className="text-center">Rate</span>
@@ -492,73 +651,135 @@ export default function EWRForm({ formData, setFormData }: EWRFormProps) {
             <span />
           </div>
 
-          {formData.equipment.map((row) => (
-            <div
-              key={row.id}
-              className={`grid grid-cols-1 items-center gap-3 rounded-md border border-zinc-200 p-3 ${equipmentGrid} md:border-0 md:p-0`}
-            >
-              <Field label="Name" className="md:[&>span]:hidden">
-                <input
-                  value={row.name}
-                  onChange={(event) =>
-                    updateEquipmentRow(row.id, "name", event.target.value)
-                  }
-                  className={compactInputClassName}
-                />
-              </Field>
+          {formData.equipment.map((row) => {
+            const matches = getEquipMatches(row.name);
 
-              <Field label="Unit No." className="md:[&>span]:hidden">
-                <input
-                  value={row.unitNumber}
-                  onChange={(event) =>
-                    updateEquipmentRow(row.id, "unitNumber", event.target.value)
-                  }
-                  className={compactInputClassName}
-                />
-              </Field>
+            return (
+              <div
+                key={row.id}
+                className={`grid grid-cols-1 items-center gap-3 rounded-md border border-zinc-200 p-3 ${equipmentGrid} md:border-0 md:p-0`}
+              >
+                {/* Equipment search */}
+                <div className="relative">
+                  <Field label="Name" className="md:[&>span]:hidden">
+                    <input
+                      value={row.name}
+                      onFocus={() => setOpenEquipdDropdown(row.id)}
+                      onChange={(event) => {
+                        updateEquipmentRow(row.id, "name", event.target.value);
 
-              <Field label="Hours" className="md:[&>span]:hidden">
-                <input
-                  type="number"
-                  min="0"
-                  step="0.25"
-                  value={row.hours}
-                  onChange={(event) => {
-                    let value = event.target.value;
+                        setOpenEquipdDropdown(row.id);
+                      }}
+                      placeholder="Equipment # or Description"
+                      className={compactInputClassName}
+                    />
+                  </Field>
 
-                    // Remove everything except digits and one decimal point
-                    value = value.replace(/[^\d.]/g, "");
-                    updateEquipmentRow(row.id, "hours", event.target.value);
-                  }}
-                  className={compactInputClassName}
-                />
-              </Field>
+                  {openEquipDropdown === row.id &&
+                    row.name &&
+                    matches.length > 0 && (
+                      <div className="absolute left-0 top-full z-50 mt-1 max-h-60 w-full overflow-y-auto rounded-md border-2 border-black bg-white shadow-lg">
+                        {matches.map((equip) => (
+                          <button
+                            key={equip.id}
+                            type="button"
+                            onClick={() => {
+                              setFormData((current) => ({
+                                ...current,
+                                equipment: current.equipment.map((equipRow) =>
+                                  equipRow.id === row.id
+                                    ? {
+                                        ...equipRow,
+                                        name: equip.description,
+                                        unitNumber: equip.equipmentNumber,
+                                        rate: equip.rate.toString(),
+                                      }
+                                    : equipRow,
+                                ),
+                              }));
 
-              <Field label="Rate" className="md:[&>span]:hidden">
-                <input
-                  type="number"
-                  min="0"
-                  step="0.01"
-                  value={row.rate}
-                  onChange={(event) =>
-                    updateEquipmentRow(row.id, "rate", event.target.value)
-                  }
-                  className={compactInputClassName}
-                />
-              </Field>
+                              setOpenEquipdDropdown(null);
+                            }}
+                            className="w-full border-b px-3 py-2 text-left transition last:border-b-0 hover:bg-gray-100"
+                          >
+                            <div className="font-semibold">
+                              {equip.description}
+                            </div>
 
-              <div className="text-center">
-                <CurrencyAmount amount={calculateAmount(row.hours, row.rate)} />
+                            <div className="text-sm text-gray-500">
+                              #{equip.equipmentNumber} · {equip.makeModelYear} ·
+                              ${equip.rate.toFixed(2)}
+                            </div>
+                          </button>
+                        ))}
+                      </div>
+                    )}
+                </div>
+
+                {/* Unit Number */}
+                <Field label="Unit No." className="md:[&>span]:hidden">
+                  <input
+                    value={row.unitNumber}
+                    onChange={(event) =>
+                      updateEquipmentRow(
+                        row.id,
+                        "unitNumber",
+                        event.target.value,
+                      )
+                    }
+                    className={compactInputClassName}
+                  />
+                </Field>
+
+                {/* Hours */}
+                <Field label="Hours" className="md:[&>span]:hidden">
+                  <input
+                    type="number"
+                    min="0"
+                    step="0.25"
+                    value={row.hours}
+                    onChange={(event) =>
+                      updateEquipmentRow(row.id, "hours", event.target.value)
+                    }
+                    className={compactInputClassName}
+                  />
+                </Field>
+
+                {/* Rate */}
+                <Field label="Rate" className="md:[&>span]:hidden">
+                  <input
+                    type="number"
+                    min="0"
+                    step="0.01"
+                    value={row.rate}
+                    onChange={(event) =>
+                      updateEquipmentRow(row.id, "rate", event.target.value)
+                    }
+                    className={compactInputClassName}
+                  />
+                </Field>
+
+                {/* Amount */}
+                <div className="text-center">
+                  <CurrencyAmount
+                    amount={calculateAmount(row.hours, row.rate)}
+                  />
+                </div>
+
+                {/* Remove */}
+                <RemoveButton onClick={() => removeRow("equipment", row.id)} />
               </div>
-
-              <RemoveButton onClick={() => removeRow("equipment", row.id)} />
-            </div>
-          ))}
+            );
+          })}
         </div>
       </section>
 
       <section className="space-y-3">
-        <SectionHeader title="Materials" onAdd={addMaterialRow} />
+        <SectionHeader
+          title="Materials"
+          onAdd={addMaterialRow}
+          disabled={formData.materials.length >= MAX_MATERIAL_ROWS}
+        />
 
         <div className="space-y-3">
           <div
@@ -572,71 +793,128 @@ export default function EWRForm({ formData, setFormData }: EWRFormProps) {
             <span />
           </div>
 
-          {formData.materials.map((row) => (
-            <div
-              key={row.id}
-              className={`grid grid-cols-1 items-center gap-3 rounded-md border border-zinc-200 p-3 ${equipmentGrid} md:border-0 md:p-0`}
-            >
-              <Field label="Name" className="md:[&>span]:hidden">
-                <input
-                  value={row.name}
-                  onChange={(event) =>
-                    updateMaterialRow(row.id, "name", event.target.value)
-                  }
-                  className={compactInputClassName}
-                />
-              </Field>
+          {formData.materials.map((row) => {
+            const matches = getMaterialMatches(row.name);
 
-              <Field label="Unit" className="md:[&>span]:hidden">
-                <input
-                  value={row.unit}
-                  onChange={(event) =>
-                    updateMaterialRow(row.id, "unit", event.target.value)
-                  }
-                  className={compactInputClassName}
-                />
-              </Field>
+            return (
+              <div
+                key={row.id}
+                className={`grid grid-cols-1 items-center gap-3 rounded-md border border-zinc-200 p-3 ${equipmentGrid} md:border-0 md:p-0`}
+              >
+                {/* Material search */}
+                <div className="relative">
+                  <Field label="Name" className="md:[&>span]:hidden">
+                    <input
+                      value={row.name}
+                      onFocus={() => setOpenMaterialDropdown(row.id)}
+                      onChange={(event) => {
+                        updateMaterialRow(row.id, "name", event.target.value);
 
-              <Field label="Quantity" className="md:[&>span]:hidden">
-                <input
-                  type="number"
-                  min="0"
-                  step="0.01"
-                  value={row.quantity}
-                  onChange={(event) =>
-                    updateMaterialRow(row.id, "quantity", event.target.value)
-                  }
-                  className={compactInputClassName}
-                />
-              </Field>
+                        setOpenMaterialDropdown(row.id);
+                      }}
+                      placeholder="Material description or Unit"
+                      className={compactInputClassName}
+                    />
+                  </Field>
 
-              <Field label="Price" className="md:[&>span]:hidden">
-                <input
-                  type="number"
-                  min="0"
-                  step="0.01"
-                  value={row.price}
-                  onChange={(event) =>
-                    updateMaterialRow(row.id, "price", event.target.value)
-                  }
-                  className={compactInputClassName}
-                />
-              </Field>
+                  {openMaterialDropdown === row.id &&
+                    row.name &&
+                    matches.length > 0 && (
+                      <div className="absolute left-0 top-full z-50 mt-1 max-h-60 w-full overflow-y-auto rounded-md border-2 border-black bg-white shadow-lg">
+                        {matches.map((material) => (
+                          <button
+                            key={material.id}
+                            type="button"
+                            onClick={() => {
+                              setFormData((current) => ({
+                                ...current,
+                                materials: current.materials.map(
+                                  (materialRow) =>
+                                    materialRow.id === row.id
+                                      ? {
+                                          ...materialRow,
+                                          name: material.type,
+                                          unit: material.unit,
+                                        }
+                                      : materialRow,
+                                ),
+                              }));
 
-              <div className="flex h-9 items-center md:justify-center">
-                <CurrencyAmount
-                  amount={calculateAmount(row.quantity, row.price)}
-                />
+                              setOpenMaterialDropdown(null);
+                            }}
+                            className="w-full border-b px-3 py-2 text-left transition last:border-b-0 hover:bg-gray-100"
+                          >
+                            <div className="font-semibold">{material.type}</div>
+
+                            <div className="text-sm text-gray-500">
+                              Unit: {material.unit}
+                            </div>
+                          </button>
+                        ))}
+                      </div>
+                    )}
+                </div>
+
+                {/* Unit */}
+                <Field label="Unit" className="md:[&>span]:hidden">
+                  <input
+                    value={row.unit}
+                    onChange={(event) =>
+                      updateMaterialRow(row.id, "unit", event.target.value)
+                    }
+                    className={compactInputClassName}
+                  />
+                </Field>
+
+                {/* Quantity */}
+                <Field label="Quantity" className="md:[&>span]:hidden">
+                  <input
+                    type="number"
+                    min="0"
+                    step="0.01"
+                    value={row.quantity}
+                    onChange={(event) =>
+                      updateMaterialRow(row.id, "quantity", event.target.value)
+                    }
+                    className={compactInputClassName}
+                  />
+                </Field>
+
+                {/* Price */}
+                <Field label="Price" className="md:[&>span]:hidden">
+                  <input
+                    type="number"
+                    min="0"
+                    step="0.01"
+                    value={row.price}
+                    onChange={(event) =>
+                      updateMaterialRow(row.id, "price", event.target.value)
+                    }
+                    className={compactInputClassName}
+                  />
+                </Field>
+
+                {/* Amount */}
+                <div className="text-center">
+                  <CurrencyAmount
+                    amount={calculateAmount(row.quantity, row.price)}
+                  />
+                </div>
+
+                {/* Remove */}
+                <RemoveButton onClick={() => removeRow("materials", row.id)} />
               </div>
-
-              <RemoveButton onClick={() => removeRow("materials", row.id)} />
-            </div>
-          ))}
+            );
+          })}
         </div>
       </section>
 
       <section className="space-y-3">
-        <SectionHeader title="Invoices" onAdd={addInvoiceRow} />
+        <SectionHeader
+          title="Invoices"
+          onAdd={addInvoiceRow}
+          disabled={formData.invoices.length >= MAX_INVOICE_ROWS}
+        />
 
         <div className="space-y-3">
           <div

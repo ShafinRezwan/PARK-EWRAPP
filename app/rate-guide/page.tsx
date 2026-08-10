@@ -1,26 +1,27 @@
 import RateTable from "@/components/rateguide/RateTable";
 import Sidebar from "@/components/sidebar";
-import { getLabourRates } from "@/lib/rates";
+import {
+  getLabourRates,
+  getEquipmentRates,
+  getMaterialRates,
+} from "@/lib/rates";
 
 import React from "react";
 
 export default async function page() {
-  const databaseRates = await getLabourRates();
-  const labourRates = databaseRates.map((rate) => ({
-    id: rate.id,
-    employeeNumber: rate.employeeNumber,
-    baseWorkClass: rate.baseWorkClass,
-    baseClassName: rate.baseClassName,
-    rate: Number(rate.rate),
-    saturdayRate: Number(rate.saturdayRate),
-    sundayRate: Number(rate.sundayRate),
-  }));
+  const labourRates = await getLabourRates();
+  const equipmentRates = await getEquipmentRates();
+  const materialRates = await getMaterialRates();
 
   return (
     <main className="flex h-screen overflow-hidden">
       <Sidebar />
       <section className="flex min-h-0 flex-1 flex-col gap-4 p-7 mx-2 ">
-        <RateTable labourRates={labourRates} />
+        <RateTable
+          labourRates={labourRates}
+          equipmentRates={equipmentRates}
+          materialRates={materialRates}
+        />
       </section>
     </main>
   );

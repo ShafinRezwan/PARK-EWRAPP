@@ -1,8 +1,12 @@
 import React from "react";
-import { equipmentRates } from "@/data/ratetable-data";
 import PageTransition from "@/components/PageTransition";
+import { EquipmentRate } from "@/lib/rates";
 
-export default function EquipmentTable() {
+type Props = {
+  equipmentRates: EquipmentRate[];
+};
+
+export default function EquipmentTable({ equipmentRates }: Props) {
   return (
     <>
       <PageTransition>
@@ -36,10 +40,10 @@ export default function EquipmentTable() {
                 </td>
 
                 <td className="px-3 py-3 text-center">
-                  {"$" + equipment.rate}
+                  {"$" + equipment.rate.toFixed(2)}
                 </td>
                 <td className="px-3 py-3 text-center">
-                  {equipment.horsePower}
+                  {equipment.horsePower ?? "—"}
                 </td>
               </tr>
             ))}

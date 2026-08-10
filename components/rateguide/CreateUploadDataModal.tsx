@@ -5,7 +5,7 @@ import { useRouter } from "next/navigation";
 
 type Props = {
   onClose: () => void;
-  category: "Labour" | "Equipment" | "Materials";
+  category: "Labour" | "Equipment" | "Materials" | "Archa Rates";
 };
 
 export default function CreateUploadDataModal({ onClose, category }: Props) {

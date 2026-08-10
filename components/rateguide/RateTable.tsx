@@ -8,23 +8,20 @@ import CreateUploadDataModal from "@/components/rateguide/CreateUploadDataModal"
 import LabourTable from "./LabourTable";
 import MaterialsTable from "./MaterialsTable";
 import EquipmentTable from "./EquipmentTable";
-
-type LabourRate = {
-  id: string;
-  employeeNumber: number;
-  baseWorkClass: string;
-  baseClassName: string;
-  rate: number;
-  saturdayRate: number;
-  sundayRate: number;
-};
+import { LabourRate, EquipmentRate, MaterialRate } from "@/lib/rates";
 
 type Props = {
   labourRates: LabourRate[];
+  equipmentRates: EquipmentRate[];
+  materialRates: MaterialRate[];
 };
 
-export default function RateTable({ labourRates }: Props) {
-  const tabs = ["Labour", "Equipment", "Materials"] as const;
+export default function RateTable({
+  labourRates,
+  equipmentRates,
+  materialRates,
+}: Props) {
+  const tabs = ["Labour", "Equipment", "Materials", "Archa Rates"] as const;
 
   const [uploadModal, setShowUploadModal] = useState(false);
 
@@ -33,7 +30,7 @@ export default function RateTable({ labourRates }: Props) {
 
   return (
     <section className="flex min-h-0 flex-1 flex-col overflow-hidden rounded-md border-[3px] border-black">
-      <div className="flex h-24">
+      <div className="flex h-24 w-full">
         {tabs.map((tab) => (
           <button
             key={tab}
@@ -47,13 +44,16 @@ export default function RateTable({ labourRates }: Props) {
               transition-all
               duration-500
               ease-in-out
-              ${selectedTab === tab ? "flex-1" : "w-40"}
+              px-2
+              ${selectedTab === tab ? "flex-1" : "w-45"}
               ${
                 tab === "Labour"
                   ? "bg-[#2CAB5D]"
                   : tab === "Equipment"
                     ? "bg-[#C90202]"
-                    : "bg-[#2C4EAB]"
+                    : tab === "Materials"
+                      ? "bg-[#2C4EAB]"
+                      : "bg-[#cf6112]"
               }
             `}
           >
@@ -89,9 +89,15 @@ export default function RateTable({ labourRates }: Props) {
       <div className="mx-2 min-h-0 flex-1 overflow-y-auto pb-10">
         {selectedTab === "Labour" && <LabourTable labourRates={labourRates} />}
 
-        {selectedTab === "Equipment" && <EquipmentTable />}
-
-        {selectedTab === "Materials" && <MaterialsTable />}
+        {selectedTab === "Equipment" && (
+          <EquipmentTable equipmentRates={equipmentRates} />
+        )}
+        {selectedTab === "Materials" && (
+          <MaterialsTable materials={materialRates} />
+        )}
+        {selectedTab === "Archa Rates" && (
+          <MaterialsTable materials={materialRates} />
+        )}
       </div>
     </section>
   );

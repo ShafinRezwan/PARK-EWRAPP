@@ -16,8 +16,11 @@ function calculateAmount(quantity: string, rate: string) {
   return (Number(quantity) || 0) * (Number(rate) || 0);
 }
 
-function calculatemarkUp(cost: string, markup: string) {
-  return (Number(cost) || 0) + (Number(markup) / 100 || 0);
+function calculateMarkup(cost: string, markup: string) {
+  const parsedCost = Number(cost) || 0;
+  const parsedMarkup = Number(markup) || 0;
+
+  return parsedCost + parsedCost * (parsedMarkup / 100);
 }
 
 function formatDate(date: string) {
@@ -47,15 +50,11 @@ export default function EWRPreview({ formData }: EWRPreviewProps) {
   );
 
   const invoiceTotal = formData.invoices.reduce((total, row) => {
-    const cost = Number(row.cost) || 0;
-    const markup = Number(row.markup) || 0;
-
-    return total + cost + cost * (markup / 100);
+    return total + calculateMarkup(row.cost, row.markup);
   }, 0);
 
-  const materialsAndInvoicesTotal = materialTotal + invoiceTotal;
-
-  const grandTotal = labourTotal + equipmentTotal + materialsAndInvoicesTotal;
+  const grandTotal =
+    labourTotal + equipmentTotal + materialTotal + invoiceTotal;
 
   const handlePrint = () => {
     window.print();
@@ -78,7 +77,7 @@ export default function EWRPreview({ formData }: EWRPreviewProps) {
       <div id="ewr-print-area">
         <article
           id="ewr-preview"
-          className="mx-auto aspect-8.5/11 w-full  overflow-auto border border-black bg-white text-black"
+          className="mx-auto aspect-8.5/11 w-full overflow-hidden border border-black bg-white text-black"
         >
           <div className="flex h-full flex-col px-[4.5%] py-[4%]">
             {/* Main document border */}
@@ -106,7 +105,7 @@ export default function EWRPreview({ formData }: EWRPreviewProps) {
                   <div />
                 </div>
 
-                <div className=" grid grid-cols-2 text-[8px]">
+                <div className="grid grid-cols-2 text-[8px]">
                   <p>
                     <span className="font-bold">To:</span> {formData.recipient}
                   </p>
@@ -117,7 +116,7 @@ export default function EWRPreview({ formData }: EWRPreviewProps) {
                   </p>
                 </div>
 
-                <div className="absolute bottom-[5%]  left-[1.2%] text-[8px] leading-tight">
+                <div className="absolute bottom-[5%] left-[1.2%] text-[8px] leading-tight">
                   <p>
                     <span className="font-bold">Job #:</span>{" "}
                     {formData.jobNumber}
@@ -130,47 +129,52 @@ export default function EWRPreview({ formData }: EWRPreviewProps) {
                 </div>
               </header>
 
-              {/* Labour */}
-              <ReportSection
-                columns="grid-cols-[62%_10%_10%_18%]"
-                headers={["Classification", "Hrs.", "Rate", "Amount"]}
-                rows={formData.labour.map((row) => [
-                  row.classification,
-                  row.hours,
-                  row.rate ? moneyFormatter.format(Number(row.rate)) : "",
-                  moneyFormatter.format(calculateAmount(row.hours, row.rate)),
-                ])}
-                totalLabel="Total Labour"
-                total={labourTotal}
-              />
+              {/* 
+                Dynamic section area.
+                This is the portion that expands/shrinks,
+                while the whole PDF stays one page.
+              */}
+              <div className="flex min-h-0 flex-1 flex-col overflow-hidden">
+                {/* Labour */}
+                <ReportSection
+                  columns="grid-cols-[62%_10%_10%_18%]"
+                  headers={["Classification", "Hrs.", "Rate", "Amount"]}
+                  rows={formData.labour.map((row) => [
+                    row.classification,
+                    row.hours,
+                    row.rate ? moneyFormatter.format(Number(row.rate)) : "",
+                    moneyFormatter.format(calculateAmount(row.hours, row.rate)),
+                  ])}
+                  totalLabel="Total Labour"
+                  total={labourTotal}
+                />
 
-              {/* Equipment */}
-              <ReportSection
-                columns="grid-cols-[45%_17%_9%_10%_19%]"
-                headers={[
-                  "Equipment & Rented Trucks Name",
-                  "Unit No.",
-                  "Hrs.",
-                  "Rate",
-                  "Amount",
-                ]}
-                rows={formData.equipment.map((row) => [
-                  row.name,
-                  row.unitNumber,
-                  row.hours,
-                  row.rate ? moneyFormatter.format(Number(row.rate)) : "",
-                  moneyFormatter.format(calculateAmount(row.hours, row.rate)),
-                ])}
-                totalLabel="Total Equipment"
-                total={equipmentTotal}
-              />
+                {/* Equipment */}
+                <ReportSection
+                  columns="grid-cols-[45%_17%_9%_10%_19%]"
+                  headers={[
+                    "Equipment & Rented Trucks Name",
+                    "Unit No.",
+                    "Hrs.",
+                    "Rate",
+                    "Amount",
+                  ]}
+                  rows={formData.equipment.map((row) => [
+                    row.name,
+                    row.unitNumber,
+                    row.hours,
+                    row.rate ? moneyFormatter.format(Number(row.rate)) : "",
+                    moneyFormatter.format(calculateAmount(row.hours, row.rate)),
+                  ])}
+                  totalLabel="Total Equipment"
+                  total={equipmentTotal}
+                />
 
-              {/* Materials  */}
-              <ReportSection
-                columns="grid-cols-[45%_17%_10%_10%_18%]"
-                headers={["Materials", "Unit", "Qty.", "Price", "Amount"]}
-                rows={[
-                  ...formData.materials.map((row) => [
+                {/* Materials */}
+                <ReportSection
+                  columns="grid-cols-[45%_17%_10%_10%_18%]"
+                  headers={["Materials", "Unit", "Qty.", "Price", "Amount"]}
+                  rows={formData.materials.map((row) => [
                     row.name,
                     row.unit,
                     row.quantity,
@@ -178,29 +182,31 @@ export default function EWRPreview({ formData }: EWRPreviewProps) {
                     moneyFormatter.format(
                       calculateAmount(row.quantity, row.price),
                     ),
-                  ]),
-                ]}
-                totalLabel="Total Materials"
-                total={materialsAndInvoicesTotal}
-              />
+                  ])}
+                  totalLabel="Total Materials"
+                  total={materialTotal}
+                />
 
-              {/* Invoices  */}
-              <ReportSection
-                columns="grid-cols-[62%_10%_10%_18%]"
-                headers={["Invoices", "Cost", "Mark Up %", "Amount"]}
-                rows={formData.invoices.map((row) => [
-                  row.name,
-                  row.cost ? moneyFormatter.format(Number(row.cost)) : "",
-                  row.markup,
-                  moneyFormatter.format(calculatemarkUp(row.cost, row.markup)),
-                ])}
-                totalLabel="Total Invoice"
-                total={labourTotal}
-              />
+                {/* Invoices */}
+                <ReportSection
+                  columns="grid-cols-[62%_10%_10%_18%]"
+                  headers={["Invoices", "Cost", "Mark Up %", "Amount"]}
+                  rows={formData.invoices.map((row) => [
+                    row.name,
+                    row.cost ? moneyFormatter.format(Number(row.cost)) : "",
+                    row.markup,
+                    moneyFormatter.format(
+                      calculateMarkup(row.cost, row.markup),
+                    ),
+                  ])}
+                  totalLabel="Total Invoice"
+                  total={invoiceTotal}
+                />
+              </div>
 
-              {/* Total */}
-              <div className="flex h-[5%] shrink-0 flex-col justify-center border-b border-black px-[2%] text-[8px] font-bold uppercase">
-                <div className="mt-[1%] flex justify-end">
+              {/* Grand Total */}
+              <div className="flex h-[5%] shrink-0 flex-col justify-center border-t border-black px-[2%] text-[8px] font-bold uppercase">
+                <div className="flex justify-end">
                   <span className="w-[36%] text-right">Total&nbsp;&nbsp;$</span>
 
                   <span className="w-[15%] text-right">
@@ -270,7 +276,6 @@ type ReportSectionProps = {
   rows: string[][];
   totalLabel: string;
   total: number;
-  maxRows?: number;
 };
 
 function ReportSection({
@@ -279,14 +284,35 @@ function ReportSection({
   rows,
   totalLabel,
   total,
-  maxRows = 8,
 }: ReportSectionProps) {
-  const visibleRows = rows.slice(0, maxRows);
+  /*
+    At least one row is always rendered so an empty section
+    still receives some space.
+  */
+  const displayRows = rows.length > 0 ? rows : [Array(headers.length).fill("")];
+
+  /*
+    More rows = this section receives more of the available
+    vertical space.
+
+    +1 prevents sections with few rows from becoming
+    excessively tiny because they still need room for
+    their header and total.
+  */
+  const sectionWeight = Math.max(displayRows.length + 1, 2);
 
   return (
-    <section className="shrink-0 ]">
-      {/* Header row */}
-      <div className={`grid h-5 bg-zinc-300 text-[7px] font-bold ${columns}`}>
+    <section
+      className="flex min-h-0 flex-col overflow-hidden"
+      style={{
+        flexGrow: sectionWeight,
+        flexBasis: 0,
+      }}
+    >
+      {/* Column headers */}
+      <div
+        className={`grid h-5 shrink-0 bg-zinc-300 text-[7px] font-bold ${columns}`}
+      >
         {headers.map((header, index) => (
           <div
             key={`${header}-${index}`}
@@ -299,53 +325,49 @@ function ReportSection({
         ))}
       </div>
 
-      {/* Dynamic rows */}
-      <div className="border-b border-black">
-        {visibleRows.map((row, rowIndex) => (
-          <div key={rowIndex} className={`grid min-h-5 text-[7px] ${columns}`}>
-            {headers.map((_, columnIndex) => (
-              <div
-                key={columnIndex}
-                className={`flex min-w-0 items-center px-2 py-0.5  ${
-                  columnIndex < headers.length - 1
-                    ? "border-r border-black"
-                    : ""
-                } ${
-                  columnIndex === 0
-                    ? "justify-start text-left"
-                    : "justify-center text-center"
-                }`}
-              >
-                <span className="truncate ">{row[columnIndex] ?? ""}</span>
-              </div>
-            ))}
-          </div>
-        ))}
-
-        {/* Keep one blank row when the section is empty */}
-        {visibleRows.length === 0 && (
-          <div className={`grid h-5 text-[7px] ${columns}`}>
-            {headers.map((_, columnIndex) => (
-              <div
-                key={columnIndex}
-                className={
-                  columnIndex < headers.length - 1
-                    ? "border-r border-black"
-                    : ""
-                }
-              />
-            ))}
-          </div>
-        )}
+      {/* Dynamic row area */}
+      <div className="min-h-0 flex-1 overflow-hidden border-b border-black">
+        <div
+          className="grid h-full min-h-0"
+          style={{
+            gridTemplateRows: `repeat(${displayRows.length}, minmax(0, 1fr))`,
+          }}
+        >
+          {displayRows.map((row, rowIndex) => (
+            <div
+              key={rowIndex}
+              className={`grid min-h-0 text-[7px] ${columns}`}
+            >
+              {headers.map((_, columnIndex) => (
+                <div
+                  key={columnIndex}
+                  className={`flex min-h-0 min-w-0 items-center overflow-hidden px-2 ${
+                    columnIndex < headers.length - 1
+                      ? "border-r border-black"
+                      : ""
+                  } ${
+                    columnIndex === 0
+                      ? "justify-start text-left"
+                      : "justify-center text-center"
+                  }`}
+                >
+                  <span className="truncate">{row[columnIndex] ?? ""}</span>
+                </div>
+              ))}
+            </div>
+          ))}
+        </div>
       </div>
 
-      {/* Total row */}
-      <div className={`grid h-10  text-[8px] font-bold uppercase ${columns}`}>
-        <div className="col-[1/-2] flex items-center justify-end  px-2 ">
+      {/* Section total */}
+      <div
+        className={`grid h-8 shrink-0 text-[8px] font-bold uppercase ${columns}`}
+      >
+        <div className="col-[1/-2] flex items-center justify-end px-2">
           {totalLabel}
         </div>
 
-        <div className="col-[-2/-1] flex items-center justify-end px-2 ">
+        <div className="col-[-2/-1] flex items-center justify-end px-2">
           {moneyFormatter.format(total)}
         </div>
       </div>

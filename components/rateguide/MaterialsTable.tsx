@@ -1,8 +1,12 @@
 import React from "react";
-import { materialRates } from "@/data/ratetable-data";
 import PageTransition from "@/components/PageTransition";
+import { MaterialRate } from "@/lib/rates";
 
-export default function MaterialsTable() {
+type Props = {
+  materials: MaterialRate[];
+};
+
+export default function MaterialsTable({ materials }: Props) {
   return (
     <>
       <PageTransition>
@@ -14,15 +18,11 @@ export default function MaterialsTable() {
             </tr>
           </thead>
           <tbody className="text-xl text-black">
-            {materialRates.map((material) => (
+            {materials.map((material) => (
               <tr key={material.id} className="border-b-2 border-park-gray">
-                <td className="px-3 py-3 text-center">
-                  {material.description}
-                </td>
+                <td className="px-3 py-3 text-center">{material.type}</td>
 
                 <td className="px-3 py-3 text-center">{material.unit}</td>
-
-                <td className="px-3 py-3 text-center">{material.rate}</td>
               </tr>
             ))}
           </tbody>

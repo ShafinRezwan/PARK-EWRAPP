@@ -1,16 +1,6 @@
 import React from "react";
 import PageTransition from "@/components/PageTransition";
-import { getLabourRates } from "@/lib/rates";
-
-type LabourRate = {
-  id: string;
-  employeeNumber: number;
-  baseWorkClass: string;
-  baseClassName: string;
-  rate: number;
-  saturdayRate: number;
-  sundayRate: number;
-};
+import { LabourRate } from "@/lib/rates";
 
 type Props = {
   labourRates: LabourRate[];
