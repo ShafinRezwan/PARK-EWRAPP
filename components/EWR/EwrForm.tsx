@@ -455,21 +455,17 @@ export default function EWRForm({
 
           <Field label="Date:">
             <Popover>
-              <PopoverTrigger>
-                <Button
-                  type="button"
-                  variant="outline"
-                  className="h-10 w-full justify-between rounded-md border-2 border-black px-3 text-base "
-                >
+              <PopoverTrigger
+                type="button"
+                className="flex h-10 w-full items-center justify-between rounded-md border-2 border-black bg-white px-3 text-base"
+              >
+                <span>
                   {formData.date
-                    ? format(
-                        new Date(`${formData.date}T00:00:00`),
-                        "MMM dd, yyyy",
-                      )
+                    ? format(new Date(`${formData.date}`), "MMM dd, yyyy")
                     : "Pick a date"}
+                </span>
 
-                  <CalendarIcon className="h-5 w-5 opacity-70" />
-                </Button>
+                <CalendarIcon className="h-5 w-5 opacity-70" />
               </PopoverTrigger>
 
               <PopoverContent className="w-auto p-0 bg-white" align="start">

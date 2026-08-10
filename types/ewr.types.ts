@@ -61,7 +61,16 @@ export type WorkReports = {
   year: string;
 };
 
-export const divisions = ["All", "01", "03", "09", "10", "41", "42", "43", "90"];
+export   const divisions = [
+    { code: "01", name: "Construction" },
+    { code: "03", name: "ARC" },
+    { code: "09", name: "Trucking" },
+    { code: "10", name: "Snow Removal" },
+    { code: "41", name: "Underground" },
+    { code: "42", name: "Excavation" },
+    { code: "43", name: "Landscaping" },
+    { code: "90", name: "RCI" },
+  ];
 
 
 export type LabourRates = {

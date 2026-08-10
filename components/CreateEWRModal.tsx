@@ -82,18 +82,15 @@ export default function CreateEWRModal({ onClose }: Props) {
             <label className="mb-2 block text-2xl font-bold">Date</label>
 
             <Popover>
-              <PopoverTrigger>
-                <Button
-                  type="button"
-                  variant="outline"
-                  className="h-12.5 w-full justify-between whitespace-nowrap rounded-md border-[3px] border-black px-3 py-0 text-base font-normal"
-                >
-                  <span>
-                    {date ? format(date, "MMM dd, yyyy") : "Pick a date"}
-                  </span>
+              <PopoverTrigger
+                type="button"
+                className="flex h-12 w-full items-center justify-between rounded-md border-[3px] border-black bg-white px-4 text-l font-normal"
+              >
+                <span>
+                  {date ? format(date, "MMM dd, yyyy") : "Pick a date"}
+                </span>
 
-                  <CalendarIcon className="h-5 w-5 shrink-0 opacity-70" />
-                </Button>
+                <CalendarIcon className="h-5 w-5 shrink-0 opacity-70" />
               </PopoverTrigger>
 
               <PopoverContent

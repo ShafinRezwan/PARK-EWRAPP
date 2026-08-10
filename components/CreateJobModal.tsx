@@ -1,5 +1,6 @@
 "use client";
 import PageTransition from "./PageTransition";
+import { divisions } from "@/types/ewr.types";
 type Props = {
   onClose: () => void;
 };
@@ -11,17 +12,6 @@ export default function createJobModal({ onClose }: Props) {
     { length: currentYear - 2019 },
     (_, i) => currentYear - i,
   );
-
-  const divisions = [
-    { code: "01", name: "Construction" },
-    { code: "03", name: "ARC" },
-    { code: "09", name: "Trucking" },
-    { code: "10", name: "Snow Removal" },
-    { code: "41", name: "Underground" },
-    { code: "42", name: "Excavation" },
-    { code: "43", name: "Landscaping" },
-    { code: "90", name: "RCI" },
-  ];
 
   return (
     <>

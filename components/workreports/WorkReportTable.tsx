@@ -40,16 +40,16 @@ export default function WorkReportTable() {
               <div className=" pointer-events-none  cursor-pointer absolute right-0 z-50  max-h-0 -translate-y-2 overflow-hidden rounded-md border-2 border-black bg-white py-0 opacity-0 shadow-lg transition-all duration-300 ease-out group-hover:pointer-events-auto group-hover:max-h-125 group-hover:translate-y-0  group-hover:opacity-100">
                 {divisions.map((division) => (
                   <button
-                    key={division}
+                    key={division.code}
                     type="button"
-                    onClick={() => setSelectedDivision(division)}
+                    onClick={() => setSelectedDivision(division.name)}
                     className={` cursor-pointer block w-full px-5 py-2 text-left ${
-                      selectedDivision === division
+                      selectedDivision === division.code
                         ? "bg-park-green text-white"
                         : "hover:bg-gray-100"
                     }`}
                   >
-                    {division}
+                    {division.code}
                   </button>
                 ))}
               </div>
