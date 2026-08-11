@@ -1,4 +1,4 @@
-import type { WorkReports } from "../types/ewr.types";
+import type { WorkReports, Jobs } from "../types/ewr.types";
 
 export const workReports: WorkReports[] = [
   {
@@ -70,5 +70,30 @@ export const workReports: WorkReports[] = [
     status: "Pending",
     divisionCode: "01",
     year: "2025",
+  },
+];
+
+
+export const jobs: Jobs[] = [
+  {
+    id: "1",
+    jobNumber: "25-050",
+    jobName: "Hillshire West Stage 1",
+    division: "01",
+    year: 2026,
+  },
+  {
+    id: "2",
+    jobNumber: "25-042",
+    jobName: "Orchards 44",
+    division: "03",
+    year: 2026,
+  },
+  {
+    id: "3",
+    jobNumber: "26-012",
+    jobName: "Anthony Henday Repairs",
+    division: "01",
+    year: 2026,
   },
 ];

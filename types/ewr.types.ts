@@ -50,6 +50,15 @@ export type EWRFormData = {
   invoices: InvoiceFormRow[];
 };
 
+
+export type Jobs = {
+  id: string;
+  jobNumber: string;
+  jobName: string;
+  division: string;
+  year: number;
+};
+
 export type WorkReports = {
   id: number;
   jobNumber: string;

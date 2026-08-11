@@ -65,11 +65,12 @@ model ToDoTask {
 }
 
 model Job {
-  id        String @id @default(cuid())
-  jobNumber String @unique
+  id        String  @id @default(cuid())
+  jobNumber String  @unique
   jobName   String
   division  String
   year      Int
+  recipient String?
 
   extraWorkReports ExtraWorkReport[]
   tasks            ToDoTask[]

@@ -1,9 +1,15 @@
-import React, { useState } from "react";
-import Link from "next/link";
+"use client";
+import { useState } from "react";
 import { workReports } from "@/data/workreports-data";
 import { divisions } from "@/types/ewr.types";
+import { getJobs, Job } from "@/lib/jobs";
 
-export default function WorkReportTable() {
+type Props = {
+  jobs: Job[];
+};
+
+export default function WorkReportTable({ jobs }: Props) {
+  const [tableView, setTableView] = useState<"reports" | "jobs">("reports");
   const reports = workReports;
   const [selectedDivision, setSelectedDivision] = useState("All");
   const [selectYear, setSelectYear] = useState("All");
@@ -13,6 +19,15 @@ export default function WorkReportTable() {
       selectedDivision === "All" || report.divisionCode === selectedDivision;
 
     const matchesYear = selectYear === "All" || report.year === selectYear;
+
+    return matchesDivision && matchesYear;
+  });
+
+  const filteredJobs = jobs.filter((job) => {
+    const matchesDivision =
+      selectedDivision === "All" || job.division === selectedDivision;
+
+    const matchesYear = selectYear === "All" || String(job.year) === selectYear;
 
     return matchesDivision && matchesYear;
   });
@@ -29,24 +44,56 @@ export default function WorkReportTable() {
   return (
     <section className="flex h-full flex-col border-black rounded-md border-[3px] px-4 py-2">
       <div className="flex justify-between">
-        <h1 className="text-park-green text-3xl mb-4">All Work Reports</h1>
+        <h1 className="text-park-green text-3xl mb-4">
+          {tableView === "reports" ? "All Jobs" : "All Work Reports"}
+        </h1>
         <div className="flex gap-2">
           <div className="flex gap-3 text-lg text-park-gray">
             <div className="relative group">
-              <button type="button" className="underline">
-                Division
+              <button
+                type="button"
+                onClick={() =>
+                  setTableView((current) =>
+                    current === "reports" ? "jobs" : "reports",
+                  )
+                }
+                className="cursor-pointer underline transition-all duration-200 ease-in-out hover:text-park-green"
+              >
+                {tableView === "reports" ? "Jobs" : "Work Reports"}
+              </button>
+            </div>
+
+            <div className="relative group">
+              <button
+                type="button"
+                className="cursor-pointer underline transition-all duration-200 ease-in-out hover:text-park-green"
+              >
+                {selectedDivision === "All"
+                  ? "Division"
+                  : `Division - ${selectedDivision}`}
               </button>
 
               <div className=" pointer-events-none  cursor-pointer absolute right-0 z-50  max-h-0 -translate-y-2 overflow-hidden rounded-md border-2 border-black bg-white py-0 opacity-0 shadow-lg transition-all duration-300 ease-out group-hover:pointer-events-auto group-hover:max-h-125 group-hover:translate-y-0  group-hover:opacity-100">
+                <button
+                  type="button"
+                  onClick={() => setSelectedDivision("All")}
+                  className={`block w-full cursor-pointer px-5 py-2 text-left ${
+                    selectedDivision === "All"
+                      ? "bg-park-green text-white"
+                      : "hover:bg-gray-100 hover:text-park-green"
+                  }`}
+                >
+                  All
+                </button>
                 {divisions.map((division) => (
                   <button
                     key={division.code}
                     type="button"
-                    onClick={() => setSelectedDivision(division.name)}
+                    onClick={() => setSelectedDivision(division.code)}
                     className={` cursor-pointer block w-full px-5 py-2 text-left ${
                       selectedDivision === division.code
                         ? "bg-park-green text-white"
-                        : "hover:bg-gray-100"
+                        : "hover:bg-gray-100 hover:text-park-green"
                     }`}
                   >
                     {division.code}
@@ -56,11 +103,14 @@ export default function WorkReportTable() {
             </div>
 
             <div className="relative group">
-              <button type="button" className="underline">
-                Year
+              <button
+                type="button"
+                className="underline cursor-pointer transition-all ease-in-out hover:text-park-green duration-200"
+              >
+                {selectYear === "All" ? "Year" : selectYear}
               </button>
 
-              <div className=" pointer-events-none  absolute -right-8 z-50  max-h-0 -translate-y-2 overflow-hidden rounded-md border-2 border-black bg-white py-0 opacity-0 shadow-lg transition-all duration-300 ease-out group-hover:pointer-events-auto group-hover:max-h-125 group-hover:translate-y-0  group-hover:opacity-100">
+              <div className=" pointer-events-none  absolute -right-8 z-50  max-h-0 -translate-y-2 overflow-hidden rounded-md border-2 border-black bg-white py-0 opacity-0 shadow-lg transition-all duration-300 ease-out group-hover:pointer-events-auto group-hover:max-h-125 group-hover:translate-y-0  group-hover:opacity-100 ">
                 {years.map((year) => (
                   <button
                     key={year}
@@ -69,7 +119,7 @@ export default function WorkReportTable() {
                     className={`block cursor-pointer w-full px-5 py-2 text-center ${
                       selectYear === year
                         ? "bg-park-green text-white"
-                        : "hover:bg-gray-100"
+                        : "hover:bg-gray-100 hover:text-park-green"
                     }`}
                   >
                     {year}
@@ -81,34 +131,63 @@ export default function WorkReportTable() {
         </div>
       </div>
       <div className="max-h-400 overflow-y-auto pb-10 mx-2">
-        <table className="w-full border-collapse text-left">
-          <thead className="sticky top-0 text-2xl text-park-gray bg-white ">
-            <tr>
-              <th className="px-3 py-1 text-center underline ">Job #</th>
-              <th className="px-3 py-1 text-center underline">Job Name</th>
-              <th className="px-3 py-1 text-center underline ">EWR #</th>
-              <th className="px-3 py-1 text-center underline">Date of Work</th>
-              <th className="px-3 py-1 text-center underline">Sent</th>
-            </tr>
-          </thead>
-          <tbody className="text-xl text-black">
-            {filteredReports.map((report, index) => (
-              <tr
-                key={`${report.ewrNumber}-${index}`}
-                className="border-b-2 border-park-gray"
-              >
-                <td className="px-3 py-3 text-center">{report.jobNumber}</td>
-
-                <td className="px-3 py-3 text-center">{report.jobName}</td>
-
-                <td className="px-3 py-3 text-center">{report.ewrNumber}</td>
-
-                <td className="px-3 py-3 text-center">{report.dateOfWork}</td>
-                <td className="px-3 py-3 text-center">{report.status}</td>
+        {tableView === "reports" ? (
+          <table className="w-full border-collapse text-left">
+            <thead className="sticky top-0 text-2xl text-park-gray bg-white ">
+              <tr>
+                <th className="px-3 py-1 text-center underline ">Job #</th>
+                <th className="px-3 py-1 text-center underline">Job Name</th>
+                <th className="px-3 py-1 text-center underline ">EWR #</th>
+                <th className="px-3 py-1 text-center underline">
+                  Date of Work
+                </th>
+                <th className="px-3 py-1 text-center underline">Sent</th>
               </tr>
-            ))}
-          </tbody>
-        </table>
+            </thead>
+            <tbody className="text-xl text-black">
+              {filteredReports.map((report) => (
+                <tr key={report.id} className="border-b-2 border-park-gray">
+                  <td className="px-3 py-3 text-center">{report.jobNumber}</td>
+
+                  <td className="px-3 py-3 text-center">{report.jobName}</td>
+
+                  <td className="px-3 py-3 text-center">{report.ewrNumber}</td>
+
+                  <td className="px-3 py-3 text-center">{report.dateOfWork}</td>
+                  <td className="px-3 py-3 text-center">{report.status}</td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        ) : (
+          <table className="w-full border-collapse text-left">
+            <thead className="sticky top-0 bg-white text-2xl text-park-gray">
+              <tr>
+                <th className="px-3 py-1 text-center underline">Job #</th>
+
+                <th className="px-3 py-1 text-center underline">Job Name</th>
+
+                <th className="px-3 py-1 text-center underline">Division</th>
+
+                <th className="px-3 py-1 text-center underline">Year</th>
+              </tr>
+            </thead>
+
+            <tbody className="text-xl text-black">
+              {filteredJobs.map((job) => (
+                <tr key={job.id} className="border-b-2 border-park-gray">
+                  <td className="px-3 py-3 text-center">{job.jobNumber}</td>
+
+                  <td className="px-3 py-3 text-center">{job.jobName}</td>
+
+                  <td className="px-3 py-3 text-center">{job.division}</td>
+
+                  <td className="px-3 py-3 text-center">{job.year}</td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        )}
       </div>
     </section>
   );
