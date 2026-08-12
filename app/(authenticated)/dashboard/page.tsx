@@ -4,7 +4,7 @@ import DashboardHeader from "../../../components/dashboard/DashboardHeader";
 import RecentWorkReports from "@/components/dashboard/RecentWorkReports";
 import TasksPanel from "@/components/dashboard/TasksPanel";
 import Modal from "@/components/Modal";
-import CreateJobModal from "@/components/createJobModal";
+import CreateJobModal from "@/components/CreateJobModal";
 import PageTransition from "@/components/PageTransition";
 
 export default function Dashboard() {

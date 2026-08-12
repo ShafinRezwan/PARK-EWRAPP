@@ -8,7 +8,7 @@ type Props = {
   onClose: () => void;
 };
 
-export default function createJobModal({ onClose }: Props) {
+export default function CreateJobModal({ onClose }: Props) {
   const router = useRouter();
 
   const currentYear = new Date().getFullYear();
