@@ -19,6 +19,7 @@ function Login() {
     try {
       setIsLoggingIn(true);
       setError("");
+      console.log("SENDING LOGIN REQUEST");
 
       const response = await fetch("/api/auth/login", {
         method: "POST",
