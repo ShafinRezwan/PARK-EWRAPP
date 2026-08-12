@@ -1,18 +1,21 @@
 "use client";
 import { useState } from "react";
-import { workReports } from "@/data/workreports-data";
 import { divisions } from "@/types/ewr.types";
 import { getJobs, Job } from "@/lib/jobs";
+import { useRouter } from "next/navigation";
+import { WorkReports, getWorkReports } from "@/lib/workReports";
 
 type Props = {
   jobs: Job[];
+  workReports: WorkReports[];
 };
 
-export default function WorkReportTable({ jobs }: Props) {
+export default function WorkReportTable({ jobs, workReports }: Props) {
   const [tableView, setTableView] = useState<"reports" | "jobs">("reports");
   const reports = workReports;
   const [selectedDivision, setSelectedDivision] = useState("All");
   const [selectYear, setSelectYear] = useState("All");
+  const router = useRouter();
 
   const filteredReports = reports.filter((report) => {
     const matchesDivision =
@@ -45,7 +48,7 @@ export default function WorkReportTable({ jobs }: Props) {
     <section className="flex h-full flex-col border-black rounded-md border-[3px] px-4 py-2">
       <div className="flex justify-between">
         <h1 className="text-park-green text-3xl mb-4">
-          {tableView === "reports" ? "All Jobs" : "All Work Reports"}
+          {tableView === "reports" ? "All  Work Reports" : "All Jobs"}
         </h1>
         <div className="flex gap-2">
           <div className="flex gap-3 text-lg text-park-gray">
@@ -59,7 +62,7 @@ export default function WorkReportTable({ jobs }: Props) {
                 }
                 className="cursor-pointer underline transition-all duration-200 ease-in-out hover:text-park-green"
               >
-                {tableView === "reports" ? "Jobs" : "Work Reports"}
+                {tableView === "reports" ? "Work Reports" : "Jobs"}
               </button>
             </div>
 
@@ -146,7 +149,11 @@ export default function WorkReportTable({ jobs }: Props) {
             </thead>
             <tbody className="text-xl text-black">
               {filteredReports.map((report) => (
-                <tr key={report.id} className="border-b-2 border-park-gray">
+                <tr
+                  key={report.id}
+                  onClick={() => router.push(`/create-ewr?id=${report.id}`)}
+                  className="cursor-pointer border-b-2 border-park-gray transition hover:bg-gray-100"
+                >
                   <td className="px-3 py-3 text-center">{report.jobNumber}</td>
 
                   <td className="px-3 py-3 text-center">{report.jobName}</td>

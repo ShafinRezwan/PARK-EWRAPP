@@ -8,21 +8,15 @@ import CreateJobModal from "@/components/createJobModal";
 import CreateEWRModal from "@/components/CreateEWRModal";
 import { Button } from "@base-ui/react";
 import WorkReportTable from "@/components/workreports/WorkReportTable";
-
-type Job = {
-  id: string;
-  jobNumber: string;
-  jobName: string;
-  division: string;
-  year: number;
-  recipient: string | null;
-};
+import { Job } from "@/lib/jobs";
+import { WorkReports } from "@/lib/workReports";
 
 type Props = {
   jobs: Job[];
+  workReports: WorkReports[];
 };
 
-export default function WorkReportPageClient({ jobs }: Props) {
+export default function WorkReportPageClient({ jobs, workReports }: Props) {
   const [showJobModal, setShowJobModal] = useState(false);
   const [showEWRModal, setShowEWRModal] = useState(false);
 
@@ -40,7 +34,7 @@ export default function WorkReportPageClient({ jobs }: Props) {
           <CreateJobModal onClose={() => setShowJobModal(false)} />
         </Modal>
 
-        <WorkReportTable jobs={jobs} />
+        <WorkReportTable jobs={jobs} workReports={workReports} />
 
         <Button
           type="button"
@@ -51,7 +45,7 @@ export default function WorkReportPageClient({ jobs }: Props) {
         </Button>
 
         <Modal isOpen={showEWRModal} onClose={() => setShowEWRModal(false)}>
-          <CreateEWRModal onClose={() => setShowEWRModal(false)} />
+          <CreateEWRModal jobs={jobs} onClose={() => setShowEWRModal(false)} />
         </Modal>
       </section>
     </main>

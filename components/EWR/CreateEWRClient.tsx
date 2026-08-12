@@ -1,7 +1,6 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { useSearchParams } from "next/navigation";
 
 import Sidebar from "@/components/sidebar";
 import EWRForm from "@/components/EWR/EwrForm";
@@ -9,7 +8,6 @@ import EWRPreview from "@/components/EWR/EwrPreview";
 
 import type { EWRFormData } from "@/types/ewr.types";
 import type { LabourRate, EquipmentRate, MaterialRate } from "@/lib/rates";
-import { materialRates } from "@/data/ratetable-data";
 
 const createId = () => crypto.randomUUID();
 
@@ -105,31 +103,46 @@ type Props = {
   labourRates: LabourRate[];
   equipmentRates: EquipmentRate[];
   materialRates: MaterialRate[];
+
+  existingReport: EWRFormData | null;
+  reportId: string | null;
+
+  initialParams: {
+    recipient: string;
+    jobNumber: string;
+    jobName: string;
+    date: string;
+  } | null;
 };
 
 export default function CreateEWRClient({
   labourRates,
   equipmentRates,
   materialRates,
+  existingReport,
+  reportId,
+  initialParams,
 }: Props) {
-  const [formData, setFormData] = useState<EWRFormData>(initialFormData);
+  const [formData, setFormData] = useState<EWRFormData>(() => {
+    // Opening a saved EWR
+    if (existingReport) {
+      return existingReport;
+    }
 
-  const searchParams = useSearchParams();
+    // Creating a new EWR from the modal
+    if (initialParams) {
+      return {
+        ...initialFormData,
+        recipient: initialParams.recipient,
+        jobNumber: initialParams.jobNumber,
+        jobName: initialParams.jobName,
+        date: initialParams.date,
+      };
+    }
 
-  useEffect(() => {
-    const recipient = searchParams.get("to") ?? "";
-    const jobNumber = searchParams.get("jobNumber") ?? "";
-    const jobName = searchParams.get("jobName") ?? "";
-    const date = searchParams.get("date") ?? "";
-
-    setFormData((currentData) => ({
-      ...currentData,
-      recipient,
-      jobNumber,
-      jobName,
-      date,
-    }));
-  }, [searchParams]);
+    // Creating a completely blank EWR
+    return initialFormData;
+  });
 
   return (
     <main className="flex min-h-screen">

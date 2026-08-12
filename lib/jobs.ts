@@ -10,6 +10,7 @@ export type Job = {
   recipient: string | null;
 };
 
+
 export async function getJobs(){
 
     const jobs = await prisma.job.findMany({

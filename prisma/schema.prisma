@@ -174,8 +174,8 @@ model EWRLabourRow {
   employeeNumber Int?
   classification String
   hours          Float
-  Rate           Decimal @db.Decimal(10, 2)
-  Amount         Decimal @db.Decimal(10, 2)
+  rate           Decimal @db.Decimal(10, 2)
+  amount         Decimal @db.Decimal(10, 2)
 
   reportId  String
   report    ExtraWorkReport @relation(fields: [reportId], references: [id], onDelete: Cascade)

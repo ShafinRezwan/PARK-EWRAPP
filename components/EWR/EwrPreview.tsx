@@ -2,6 +2,8 @@
 
 import Image from "next/image";
 import type { EWRFormData } from "../../types/ewr.types";
+import { useState } from "react";
+import { useRouter } from "next/navigation";
 
 type EWRPreviewProps = {
   formData: EWRFormData;
@@ -34,6 +36,10 @@ function formatDate(date: string) {
 }
 
 export default function EWRPreview({ formData }: EWRPreviewProps) {
+  const [isSaving, setIsSaving] = useState(false);
+  const [saveError, setSaveError] = useState("");
+  const router = useRouter();
+
   const labourTotal = formData.labour.reduce(
     (total, row) => total + calculateAmount(row.hours, row.rate),
     0,
@@ -60,8 +66,52 @@ export default function EWRPreview({ formData }: EWRPreviewProps) {
     window.print();
   };
 
-  const handleSave = () => {
-    console.log("Save EWR", formData);
+  const handleSave = async () => {
+    try {
+      setIsSaving(true);
+      setSaveError("");
+
+      const response = await fetch("/api/ewr", {
+        method: "POST",
+
+        headers: {
+          "Content-Type": "application/json",
+        },
+
+        body: JSON.stringify({
+          jobNumber: formData.jobNumber,
+          recipient: formData.recipient,
+          date: formData.date,
+          description: formData.description,
+
+          labour: formData.labour,
+          equipment: formData.equipment,
+          materials: formData.materials,
+
+          invoices: formData.invoices.map((invoice) => ({
+            id: invoice.id,
+            name: invoice.name,
+            cost: invoice.cost,
+            markup: invoice.markup,
+            amount: invoice.amount,
+          })),
+        }),
+      });
+
+      const result = await response.json();
+
+      if (!response.ok) {
+        throw new Error(result.error ?? "Unable to save EWR.");
+      }
+
+      console.log("Saved report:", result.report);
+    } catch (error) {
+      setSaveError(
+        error instanceof Error ? error.message : "Unable to save EWR.",
+      );
+    } finally {
+      setIsSaving(false);
+    }
   };
 
   const handleSend = () => {
@@ -245,9 +295,10 @@ export default function EWRPreview({ formData }: EWRPreviewProps) {
         <button
           type="button"
           onClick={handleSave}
+          disabled={isSaving}
           className="rounded-md bg-sky-600 px-3 py-2.5 text-lg font-semibold text-white transition hover:bg-sky-700"
         >
-          SAVE
+          {isSaving ? "SAVING..." : "SAVE"}
         </button>
 
         <button

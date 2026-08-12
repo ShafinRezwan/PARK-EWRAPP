@@ -26,7 +26,7 @@ export type InvoiceFormRow = {
   name: string;
   cost: string;
   markup: string;
-   amount: string;
+  amount: string;
   invoiceAttachment: InvoiceAttachment | null;
 };
 
@@ -50,60 +50,13 @@ export type EWRFormData = {
   invoices: InvoiceFormRow[];
 };
 
-
-export type Jobs = {
-  id: string;
-  jobNumber: string;
-  jobName: string;
-  division: string;
-  year: number;
-};
-
-export type WorkReports = {
-  id: number;
-  jobNumber: string;
-  jobName: string;
-  ewrNumber: string;
-  dateOfWork: string;
-  status: "Sent" | "Pending";
-  divisionCode: string;
-  year: string;
-};
-
-export   const divisions = [
-    { code: "01", name: "Construction" },
-    { code: "03", name: "ARC" },
-    { code: "09", name: "Trucking" },
-    { code: "10", name: "Snow Removal" },
-    { code: "41", name: "Underground" },
-    { code: "42", name: "Excavation" },
-    { code: "43", name: "Landscaping" },
-    { code: "90", name: "RCI" },
-  ];
-
-
-export type LabourRates = {
-  id: number;
-  employeeNumber: number;
-  baseWorkClass: string;
-  baseClassName: string;
-  rate: number;
-  saturdayRate: number;
-  sundayRate: number;
-};
-
-export type EquipmentRates = {
-  id: number;
-  equipmentNumber: number;
-  makeModelYear: string;
-  description: string;
-  rate: number;
-  horsePower: number;
-};
-
-export type MaterialRates = {
-  id: number;
-  description: string;
-  unit: string;
-  rate: string;
-};
+export const divisions = [
+  { code: "01", name: "Construction" },
+  { code: "03", name: "ARC" },
+  { code: "09", name: "Trucking" },
+  { code: "10", name: "Snow Removal" },
+  { code: "41", name: "Underground" },
+  { code: "42", name: "Excavation" },
+  { code: "43", name: "Landscaping" },
+  { code: "90", name: "RCI" },
+];
