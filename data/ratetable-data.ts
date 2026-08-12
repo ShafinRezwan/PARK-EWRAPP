@@ -1,8 +1,8 @@
-import type { LabourRates, EquipmentRates, MaterialRates } from "@/types/ewr.types";
+import type { LabourRate, MaterialRate, EquipmentRate } from "@/lib/rates";
 
-export const labourRates: LabourRates[] = [
+export const labourRates: LabourRate[] = [
   {
-    id: 1,
+    id: "1",
     employeeNumber: 13201,
     baseWorkClass: "AF3",
     baseClassName: "Foreman 3",
@@ -11,7 +11,7 @@ export const labourRates: LabourRates[] = [
     sundayRate: 165.41,
   },
   {
-    id: 2,
+    id: "2",
     employeeNumber: 25172,
     baseWorkClass: "AL3",
     baseClassName: "Asphalt Labourer 3",
@@ -20,7 +20,7 @@ export const labourRates: LabourRates[] = [
     sundayRate: 105.80,
   },
    {
-    id: 3,
+    id: "3",
     employeeNumber: 21068,
     baseWorkClass: "BF3",
     baseClassName: "Base Foreman 1",
@@ -31,34 +31,34 @@ export const labourRates: LabourRates[] = [
   
 ];
 
-export const equipmentRates: EquipmentRates[] = [
+export const equipmentRates: EquipmentRate[] = [
   {
-    id: 1,
-    equipmentNumber: 1001,
+    id: "1",
+    equipmentNumber: "1001",
     makeModelYear: "Caterpillar D3",
     description: "Dozer",
     rate: 150.00,
     horsePower: 150,
   },
   {
-    id: 2,
-    equipmentNumber: 1002,
+    id: "2",
+    equipmentNumber: "1002",
     makeModelYear: "John Deere E3",
     description: "Excavator",
     rate: 200.00,
     horsePower: 200,
   },
   {
-    id: 3,
-    equipmentNumber: 1003,
+    id: "3",
+    equipmentNumber: "1003",
     makeModelYear: "Komatsu D3",
     description: "Bulldozer",
     rate: 180.00,
     horsePower: 180,
   },
   {
-    id: 4,
-    equipmentNumber: 1004,
+    id: "4",
+    equipmentNumber: "1004",
     makeModelYear: "Chevy 2020",
     description: "1 Ton Truck",
     rate: 210.00,
@@ -67,24 +67,21 @@ export const equipmentRates: EquipmentRates[] = [
 
 ];
 
-export const materialRates: MaterialRates[] = [
+export const materialRates: MaterialRate[] = [
   {
-    id: 1,
-    description: "Asphalt",
+    id: "1",
+    type: "Asphalt",
     unit: "te",
-    rate: "",
   },
   {
-    id: 2,
-    description: "Concrete",
+    id: "2",
+    type: "Concrete",
     unit: "m³",
-    rate: "",
   },
   {
-    id: 3,
-    description: "Gravel",
+    id: "3",
+    type: "Gravel",
     unit: "m³",
-    rate: "",
   },
 
 ];

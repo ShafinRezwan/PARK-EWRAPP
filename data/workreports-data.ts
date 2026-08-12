@@ -1,85 +1,87 @@
-import type { WorkReports, Jobs } from "../types/ewr.types";
+import type { WorkReports } from "@/lib/workReports";
+import { Job } from "@/lib/jobs";
 
 export const workReports: WorkReports[] = [
   {
-    id: 1,
+    id: "1",
     jobNumber: "25-050",
     jobName: "Hillshire West Stage 1",
     ewrNumber: "9801",
     dateOfWork: "06/14/2026",
-    status: "Sent",
+    status: "DRAFT",
     divisionCode: "01",
     year: "2026",
   },
   {
-    id: 2,
+    id: "2",
     jobNumber: "25-042",
     jobName: "Orchards 44",
     ewrNumber: "9841",
     dateOfWork: "05/12/2026",
-    status: "Pending",
+    status: "SENT",
     divisionCode: "03",
     year: "2026",
   },
   {
-    id: 3,
+    id: "3",
     jobNumber: "25-050",
     jobName: "Hillshire West Stage 1",
     ewrNumber: "9801",
     dateOfWork: "06/14/2026",
-    status: "Sent",
+    status: "DRAFT",
     divisionCode: "01",
     year: "2026",
   },
   {
-    id: 4,
+    id: "4",
     jobNumber: "25-050",
     jobName: "Hillshire West Stage 1",
     ewrNumber: "9801",
     dateOfWork: "06/14/2026",
-    status: "Pending",
+    status: "DRAFT",
     divisionCode: "01",
     year: "2026",
   },
   {
-    id: 5,
+    id: "5",
     jobNumber: "25-050",
     jobName: "Hillshire West Stage 1",
     ewrNumber: "9801",
     dateOfWork: "06/14/2026",
-    status: "Pending",
+    status: "DRAFT",
     divisionCode: "01",
     year: "2026",
   },
   {
-    id: 6,
+    id: "6",
     jobNumber: "25-050",
     jobName: "Hillshire West Stage 1",
     ewrNumber: "9801",
     dateOfWork: "06/14/2026",
-    status: "Sent",
+    status: "DRAFT",
     divisionCode: "01",
     year: "2026",
   },
   {
-    id: 7,
+    id: "7",
     jobNumber: "25-042",
     jobName: "Orchards 44",
     ewrNumber: "9841",
     dateOfWork: "05/12/2026",
-    status: "Pending",
+    status: "DRAFT",
     divisionCode: "01",
     year: "2025",
   },
 ];
 
 
-export const jobs: Jobs[] = [
+export const jobs: Job[] = [
   {
     id: "1",
     jobNumber: "25-050",
     jobName: "Hillshire West Stage 1",
     division: "01",
+    recipient:"City of Edmonton",
     year: 2026,
   },
   {
@@ -87,6 +89,7 @@ export const jobs: Jobs[] = [
     jobNumber: "25-042",
     jobName: "Orchards 44",
     division: "03",
+     recipient:"City of Edmonton",
     year: 2026,
   },
   {
@@ -94,6 +97,7 @@ export const jobs: Jobs[] = [
     jobNumber: "26-012",
     jobName: "Anthony Henday Repairs",
     division: "01",
+     recipient:"City of Edmonton",
     year: 2026,
   },
 ];

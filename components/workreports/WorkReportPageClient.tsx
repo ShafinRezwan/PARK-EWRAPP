@@ -4,7 +4,7 @@ import { useState } from "react";
 import DashboardHeader from "@/components/dashboard/DashboardHeader";
 import Sidebar from "@/components/sidebar";
 import Modal from "@/components/Modal";
-import CreateJobModal from "@/components/createJobModal";
+import CreateJobModal from "@/components/CreateJobModal";
 import CreateEWRModal from "@/components/CreateEWRModal";
 import { Button } from "@base-ui/react";
 import WorkReportTable from "@/components/workreports/WorkReportTable";
