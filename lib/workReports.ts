@@ -45,9 +45,15 @@ export async function getWorkReports(): Promise<WorkReports[]> {
 }
 
 
+export type ExistingWorkReport = {
+  id: string;
+  ewrNumber: string;
+  formData: EWRFormData;
+};
+
 export async function getWorkReportById(
   id: string,
-): Promise<EWRFormData | null> {
+): Promise<ExistingWorkReport | null> {
   const report = await prisma.extraWorkReport.findUnique({
     where: {
       id,
@@ -66,54 +72,54 @@ export async function getWorkReportById(
   }
 
   return {
-    recipient: report.recipient ?? "",
+    id: report.id,
+    ewrNumber: report.ewrNumber,
 
-    jobNumber: report.job?.jobNumber ?? "",
+    formData: {
+      recipient: report.recipient ?? "",
+      jobNumber: report.job?.jobNumber ?? "",
+      jobName: report.job?.jobName ?? "",
+      date: report.workDate.toISOString().split("T")[0],
+      description: report.description,
 
-    jobName: report.job?.jobName ?? "",
+      labour: report.labourEntries.map((row) => ({
+        id: row.id,
+        classification: row.classification,
+        hours: String(row.hours),
+        rate: String(row.rate),
+      })),
 
-    date: report.workDate.toISOString().split("T")[0],
+      equipment: report.equipmentEntries.map((row) => ({
+        id: row.id,
+        name: row.name,
+        unitNumber: row.unitNumber,
+        hours: String(row.hours),
+        rate: String(row.rate),
+      })),
 
-    description: report.description,
+      materials: report.materialEntries.map((row) => ({
+        id: row.id,
+        name: row.name,
+        unit: row.unit,
+        quantity: String(row.quantity),
+        price: String(row.price),
+      })),
 
-    labour: report.labourEntries.map((row) => ({
-      id: row.id,
-      classification: row.classification,
-      hours: String(row.hours),
-      rate: String(row.rate),
-    })),
-
-    equipment: report.equipmentEntries.map((row) => ({
-      id: row.id,
-      name: row.name,
-      unitNumber: row.unitNumber,
-      hours: String(row.hours),
-      rate: String(row.rate),
-    })),
-
-    materials: report.materialEntries.map((row) => ({
-      id: row.id,
-      name: row.name,
-      unit: row.unit,
-      quantity: String(row.quantity),
-      price: String(row.price),
-    })),
-
-    invoices: report.invoices.map((row) => {
-      const cost = Number(row.cost);
-      const markup = Number(row.markup);
-
-      const amount =
-        cost + cost * (markup / 100);
-
-      return {
+      invoices: report.invoices.map((row) => ({
         id: row.id,
         name: row.name,
         cost: String(row.cost),
         markup: String(row.markup),
-        amount: String(amount),
+
+        // Calculate this since your Prisma EWRInvoiceRow
+        // doesn't currently store amount
+        amount: String(
+          Number(row.cost) +
+            Number(row.cost) * (Number(row.markup) / 100),
+        ),
+
         invoiceAttachment: null,
-      };
-    }),
+      })),
+    },
   };
 }

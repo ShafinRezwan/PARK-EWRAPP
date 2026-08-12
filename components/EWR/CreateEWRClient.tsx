@@ -106,6 +106,7 @@ type Props = {
 
   existingReport: EWRFormData | null;
   reportId: string | null;
+  ewrNumber: string | null;
 
   initialParams: {
     recipient: string;
@@ -122,6 +123,7 @@ export default function CreateEWRClient({
   existingReport,
   reportId,
   initialParams,
+  ewrNumber,
 }: Props) {
   const [formData, setFormData] = useState<EWRFormData>(() => {
     // Opening a saved EWR
@@ -162,7 +164,11 @@ export default function CreateEWRClient({
 
           <aside className="bg-zinc-50 px-5 py-8 md:px-7">
             <div className="xl:sticky xl:top-6">
-              <EWRPreview formData={formData} reportId={reportId} />
+              <EWRPreview
+                formData={formData}
+                reportId={reportId}
+                ewrNumber={ewrNumber}
+              />
             </div>
           </aside>
         </div>

@@ -34,8 +34,9 @@ export default async function Page({ searchParams }: Props) {
       labourRates={labourRates}
       equipmentRates={equipmentRates}
       materialRates={materialRates}
-      existingReport={existingReport}
+      existingReport={existingReport?.formData ?? null}
       reportId={params.id ?? null}
+      ewrNumber={existingReport?.ewrNumber ?? null}
       initialParams={
         params.id
           ? null

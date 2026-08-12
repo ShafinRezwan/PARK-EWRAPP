@@ -8,6 +8,7 @@ import { useRouter } from "next/navigation";
 type EWRPreviewProps = {
   formData: EWRFormData;
   reportId: string | null;
+  ewrNumber: string | null;
 };
 
 const moneyFormatter = new Intl.NumberFormat("en-US", {
@@ -36,9 +37,16 @@ function formatDate(date: string) {
   }).format(new Date(`${date}T00:00:00`));
 }
 
-export default function EWRPreview({ formData, reportId }: EWRPreviewProps) {
+export default function EWRPreview({
+  formData,
+  reportId,
+  ewrNumber,
+}: EWRPreviewProps) {
   const [isSaving, setIsSaving] = useState(false);
   const [saveError, setSaveError] = useState("");
+  const [saveMessage, setSaveMessage] = useState("");
+  const [showSaveMessage, setShowSaveMessage] = useState(false);
+
   const router = useRouter();
 
   const labourTotal = formData.labour.reduce(
@@ -71,6 +79,7 @@ export default function EWRPreview({ formData, reportId }: EWRPreviewProps) {
     try {
       setIsSaving(true);
       setSaveError("");
+      setSaveMessage("");
 
       const payload = {
         jobNumber: formData.jobNumber,
@@ -110,16 +119,25 @@ export default function EWRPreview({ formData, reportId }: EWRPreviewProps) {
         throw new Error(result.error ?? "Unable to save EWR.");
       }
 
-      // If this was a brand new EWR,
-      // move the page onto the saved report URL.
+      // Show success message
+      setSaveMessage(`EWR #${result.report.ewrNumber} saved as draft`);
+
+      setShowSaveMessage(true);
+
+      setTimeout(() => {
+        setShowSaveMessage(false);
+      }, 2500);
+
+      setTimeout(() => {
+        setSaveMessage("");
+      }, 3000);
+
+      // New report
       if (!reportId && result.report?.id) {
         router.replace(`/create-ewr?id=${result.report.id}`);
       } else {
-        // Existing EWR was updated.
         router.refresh();
       }
-
-      console.log("EWR saved:", result);
     } catch (error) {
       console.error("Save EWR error:", error);
 
@@ -136,7 +154,7 @@ export default function EWRPreview({ formData, reportId }: EWRPreviewProps) {
   };
 
   const handleCancel = () => {
-    console.log("Cancel EWR");
+    router.push("/work-reports");
   };
 
   return (
@@ -165,7 +183,7 @@ export default function EWRPreview({ formData, reportId }: EWRPreviewProps) {
 
                   <div className="pt-[8%] text-center">
                     <h1 className="text-[14px] font-bold uppercase tracking-tight">
-                      Extra Work Report # 9800
+                      Extra Work Report # {ewrNumber ?? ""}
                     </h1>
                   </div>
 
@@ -334,6 +352,31 @@ export default function EWRPreview({ formData, reportId }: EWRPreviewProps) {
       >
         PRINT PDF
       </button>
+      {saveMessage && (
+        <div
+          className={`
+      fixed left-1/2 top-2 z-[9999]
+      -translate-x-1/2
+      rounded-lg
+      bg-park-green
+      px-6 py-3
+      text-lg font-semibold text-white
+      shadow-xl
+
+      transition-all
+      duration-500
+      ease-in-out
+
+      ${
+        showSaveMessage
+          ? "translate-y-0 opacity-100"
+          : "-translate-y-6 opacity-0"
+      }
+    `}
+        >
+          ✓ {saveMessage}
+        </div>
+      )}
     </div>
   );
 }
