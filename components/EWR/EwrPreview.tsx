@@ -7,6 +7,7 @@ import { useRouter } from "next/navigation";
 
 type EWRPreviewProps = {
   formData: EWRFormData;
+  reportId: string | null;
 };
 
 const moneyFormatter = new Intl.NumberFormat("en-US", {
@@ -35,7 +36,7 @@ function formatDate(date: string) {
   }).format(new Date(`${date}T00:00:00`));
 }
 
-export default function EWRPreview({ formData }: EWRPreviewProps) {
+export default function EWRPreview({ formData, reportId }: EWRPreviewProps) {
   const [isSaving, setIsSaving] = useState(false);
   const [saveError, setSaveError] = useState("");
   const router = useRouter();
@@ -71,32 +72,37 @@ export default function EWRPreview({ formData }: EWRPreviewProps) {
       setIsSaving(true);
       setSaveError("");
 
-      const response = await fetch("/api/ewr", {
-        method: "POST",
+      const payload = {
+        jobNumber: formData.jobNumber,
+        recipient: formData.recipient,
+        date: formData.date,
+        description: formData.description,
 
-        headers: {
-          "Content-Type": "application/json",
+        labour: formData.labour,
+        equipment: formData.equipment,
+        materials: formData.materials,
+
+        invoices: formData.invoices.map((invoice) => ({
+          id: invoice.id,
+          name: invoice.name,
+          cost: invoice.cost,
+          markup: invoice.markup,
+          amount: invoice.amount,
+        })),
+      };
+
+      const response = await fetch(
+        reportId ? `/api/ewr/${reportId}` : "/api/ewr",
+        {
+          method: reportId ? "PUT" : "POST",
+
+          headers: {
+            "Content-Type": "application/json",
+          },
+
+          body: JSON.stringify(payload),
         },
-
-        body: JSON.stringify({
-          jobNumber: formData.jobNumber,
-          recipient: formData.recipient,
-          date: formData.date,
-          description: formData.description,
-
-          labour: formData.labour,
-          equipment: formData.equipment,
-          materials: formData.materials,
-
-          invoices: formData.invoices.map((invoice) => ({
-            id: invoice.id,
-            name: invoice.name,
-            cost: invoice.cost,
-            markup: invoice.markup,
-            amount: invoice.amount,
-          })),
-        }),
-      });
+      );
 
       const result = await response.json();
 
@@ -104,8 +110,19 @@ export default function EWRPreview({ formData }: EWRPreviewProps) {
         throw new Error(result.error ?? "Unable to save EWR.");
       }
 
-      console.log("Saved report:", result.report);
+      // If this was a brand new EWR,
+      // move the page onto the saved report URL.
+      if (!reportId && result.report?.id) {
+        router.replace(`/create-ewr?id=${result.report.id}`);
+      } else {
+        // Existing EWR was updated.
+        router.refresh();
+      }
+
+      console.log("EWR saved:", result);
     } catch (error) {
+      console.error("Save EWR error:", error);
+
       setSaveError(
         error instanceof Error ? error.message : "Unable to save EWR.",
       );

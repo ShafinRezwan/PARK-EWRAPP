@@ -162,7 +162,7 @@ export default function CreateEWRClient({
 
           <aside className="bg-zinc-50 px-5 py-8 md:px-7">
             <div className="xl:sticky xl:top-6">
-              <EWRPreview formData={formData} />
+              <EWRPreview formData={formData} reportId={reportId} />
             </div>
           </aside>
         </div>
