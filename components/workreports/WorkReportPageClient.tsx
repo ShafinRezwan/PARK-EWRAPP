@@ -19,22 +19,27 @@ type Props = {
 export default function WorkReportPageClient({ jobs, workReports }: Props) {
   const [showJobModal, setShowJobModal] = useState(false);
   const [showEWRModal, setShowEWRModal] = useState(false);
-
+  const [searchQuery, setSearchQuery] = useState("");
   return (
     <main className="flex min-h-screen">
-      <Sidebar />
-
       <section className="mx-2 flex min-w-0 flex-1 flex-col gap-4 p-7">
         <DashboardHeader
           buttonText="Create New Job"
           onButtonClick={() => setShowJobModal(true)}
+          searchPlaceholder="Search jobs and work reports"
+          searchQuery={searchQuery}
+          onSearchChange={setSearchQuery}
         />
 
         <Modal isOpen={showJobModal} onClose={() => setShowJobModal(false)}>
           <CreateJobModal onClose={() => setShowJobModal(false)} />
         </Modal>
 
-        <WorkReportTable jobs={jobs} workReports={workReports} />
+        <WorkReportTable
+          jobs={jobs}
+          workReports={workReports}
+          searchQuery={searchQuery}
+        />
 
         <Button
           type="button"

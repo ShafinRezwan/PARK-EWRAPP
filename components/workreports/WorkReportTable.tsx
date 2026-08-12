@@ -1,29 +1,43 @@
 "use client";
 import { useState } from "react";
 import { divisions } from "@/types/ewr.types";
-import { getJobs, Job } from "@/lib/jobs";
+import { Job } from "@/lib/jobs";
 import { useRouter } from "next/navigation";
-import { WorkReports, getWorkReports } from "@/lib/workReports";
+import { WorkReports } from "@/lib/workReports";
+import { format } from "date-fns";
 
 type Props = {
   jobs: Job[];
   workReports: WorkReports[];
+  searchQuery: string;
 };
 
-export default function WorkReportTable({ jobs, workReports }: Props) {
+export default function WorkReportTable({
+  jobs,
+  workReports,
+  searchQuery,
+}: Props) {
   const [tableView, setTableView] = useState<"reports" | "jobs">("reports");
-  const reports = workReports;
   const [selectedDivision, setSelectedDivision] = useState("All");
   const [selectYear, setSelectYear] = useState("All");
   const router = useRouter();
 
-  const filteredReports = reports.filter((report) => {
+  const filteredReports = workReports.filter((report) => {
     const matchesDivision =
       selectedDivision === "All" || report.divisionCode === selectedDivision;
 
     const matchesYear = selectYear === "All" || report.year === selectYear;
 
-    return matchesDivision && matchesYear;
+    const search = (searchQuery ?? "").toLowerCase().trim();
+
+    const matchesSearch =
+      search === "" ||
+      (report.jobNumber ?? "").toLowerCase().includes(search) ||
+      (report.jobName ?? "").toLowerCase().includes(search) ||
+      (report.ewrNumber ?? "").toLowerCase().includes(search) ||
+      (report.status ?? "").toLowerCase().includes(search);
+
+    return matchesDivision && matchesYear && matchesSearch;
   });
 
   const filteredJobs = jobs.filter((job) => {
@@ -32,7 +46,16 @@ export default function WorkReportTable({ jobs, workReports }: Props) {
 
     const matchesYear = selectYear === "All" || String(job.year) === selectYear;
 
-    return matchesDivision && matchesYear;
+    const search = (searchQuery ?? "").toLowerCase().trim();
+
+    const matchesSearch =
+      search === "" ||
+      (job.jobNumber ?? "").toLowerCase().includes(search) ||
+      (job.jobName ?? "").toLowerCase().includes(search) ||
+      (job.division ?? "").toLowerCase().includes(search) ||
+      String(job.year ?? "").includes(search);
+
+    return matchesDivision && matchesYear && matchesSearch;
   });
 
   const currentYear = new Date().getFullYear();
@@ -160,7 +183,9 @@ export default function WorkReportTable({ jobs, workReports }: Props) {
 
                   <td className="px-3 py-3 text-center">{report.ewrNumber}</td>
 
-                  <td className="px-3 py-3 text-center">{report.dateOfWork}</td>
+                  <td className="px-3 py-3 text-center">
+                    {format(new Date(report.dateOfWork), "MMM dd, yyyy")}
+                  </td>
                   <td className="px-3 py-3 text-center">{report.status}</td>
                 </tr>
               ))}

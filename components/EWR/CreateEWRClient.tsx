@@ -147,32 +147,28 @@ export default function CreateEWRClient({
   });
 
   return (
-    <main className="flex min-h-screen">
-      <Sidebar />
+    <div className="min-w-0 flex-1">
+      <div className="grid min-h-screen grid-cols-1 xl:grid-cols-[minmax(0,1fr)_390px]">
+        <section className="min-w-0 border-r border-zinc-200 px-5 py-8 md:px-8">
+          <EWRForm
+            formData={formData}
+            setFormData={setFormData}
+            labourRates={labourRates}
+            equipmentRates={equipmentRates}
+            materialRates={materialRates}
+          />
+        </section>
 
-      <div className="min-w-0 flex-1">
-        <div className="grid min-h-screen grid-cols-1 xl:grid-cols-[minmax(0,1fr)_390px]">
-          <section className="min-w-0 border-r border-zinc-200 px-5 py-8 md:px-8">
-            <EWRForm
+        <aside className="bg-zinc-50 px-5 py-8 md:px-7">
+          <div className="xl:sticky xl:top-6">
+            <EWRPreview
               formData={formData}
-              setFormData={setFormData}
-              labourRates={labourRates}
-              equipmentRates={equipmentRates}
-              materialRates={materialRates}
+              reportId={reportId}
+              ewrNumber={ewrNumber}
             />
-          </section>
-
-          <aside className="bg-zinc-50 px-5 py-8 md:px-7">
-            <div className="xl:sticky xl:top-6">
-              <EWRPreview
-                formData={formData}
-                reportId={reportId}
-                ewrNumber={ewrNumber}
-              />
-            </div>
-          </aside>
-        </div>
+          </div>
+        </aside>
       </div>
-    </main>
+    </div>
   );
 }

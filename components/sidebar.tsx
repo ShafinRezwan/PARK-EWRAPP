@@ -1,10 +1,12 @@
 "use client";
 import Link from "next/link";
 import Image from "next/image";
-import { usePathname } from "next/navigation";
-
+import { usePathname, useRouter } from "next/navigation";
 type SidebarProps = {
-  activePage?: string;
+  user: {
+    firstName: string;
+    lastName: string;
+  };
 };
 
 const navItems = [
@@ -14,9 +16,26 @@ const navItems = [
   { label: "Rate Guide", href: "/rate-guide" },
 ];
 
-export default function Sidebar() {
+export default function Sidebar({ user }: SidebarProps) {
   const pathname = usePathname();
+  const router = useRouter();
 
+  const handleLogout = async () => {
+    try {
+      const response = await fetch("/api/auth/logout", {
+        method: "POST",
+      });
+
+      if (!response.ok) {
+        throw new Error("Unable to log out.");
+      }
+
+      router.push("/");
+      router.refresh();
+    } catch (error) {
+      console.error("LOGOUT ERROR:", error);
+    }
+  };
   return (
     <aside className="flex sticky min-h-screen w-64 flex-col border-r-4 border-park-green bg-white">
       <div className="flex justify-center px-5 py-5">
@@ -73,13 +92,17 @@ export default function Sidebar() {
           </div>
 
           <div className="text-center text-lg font-bold">
-            <span>Shafin Rezwan</span>
+            <span>
+              {user.firstName} {user.lastName}
+            </span>
             <span className="mx-1 text-gray-500">|</span>
-            <a href="/logout">
-              <button type="button" className="text-red-600 hover:underline">
-                Logout
-              </button>
-            </a>
+            <button
+              type="button"
+              onClick={handleLogout}
+              className="cursor-pointer text-red-600 hover:underline"
+            >
+              Logout
+            </button>
           </div>
         </div>
       </div>

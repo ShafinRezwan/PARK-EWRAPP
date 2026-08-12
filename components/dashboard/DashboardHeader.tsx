@@ -2,12 +2,16 @@ type DashboardHeaderProps = {
   buttonText: string;
   onButtonClick: () => void;
   searchPlaceholder?: string;
+  searchQuery: string;
+  onSearchChange: (value: string) => void;
 };
 
 export default function DashboardHeader({
   buttonText,
   onButtonClick,
   searchPlaceholder = "Search",
+  searchQuery,
+  onSearchChange,
 }: DashboardHeaderProps) {
   return (
     <header className="flex items-center justify-between gap-6">
@@ -18,6 +22,8 @@ export default function DashboardHeader({
         id="dashboard-search"
         type="search"
         placeholder={searchPlaceholder}
+        value={searchQuery}
+        onChange={(event) => onSearchChange(event.target.value)}
         className="w-full max-w-sm rounded-md border-[3px] border-black px-3 py-2 text-xl text-park-gray outline-none transition focus:border-park-green"
       />
 

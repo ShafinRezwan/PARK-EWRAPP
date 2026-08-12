@@ -42,6 +42,22 @@ model User {
   assignedTasks ToDoTask[] @relation("TaskAssignee")
 
   extraWorkReports ExtraWorkReport[]
+
+  sessions Session[]
+}
+
+model Session {
+  id        String   @id @default(cuid())
+  tokenHash String   @unique
+  expiresAt DateTime
+
+  userId String
+  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  createdAt DateTime @default(now())
+
+  @@index([userId])
+  @@index([expiresAt])
 }
 
 model ToDoTask {
