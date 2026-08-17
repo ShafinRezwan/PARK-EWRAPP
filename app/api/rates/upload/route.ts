@@ -217,7 +217,8 @@ export async function POST(request: Request) {
         XLSX.utils.sheet_to_json<EquipmentSpreadsheetRow>(worksheet, {
           defval: "",
         });
-
+        console.log("EQUIPMENT HEADERS:", Object.keys(rows[0] ?? {}));
+console.log("FIRST EQUIPMENT ROW:", rows[0]);
       if (rows.length === 0) {
         return NextResponse.json(
           { error: "The spreadsheet contains no equipment-rate rows." },
