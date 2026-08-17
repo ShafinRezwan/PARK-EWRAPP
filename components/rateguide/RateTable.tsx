@@ -23,10 +23,48 @@ export default function RateTable({
 }: Props) {
   const tabs = ["Labour", "Equipment", "Materials", "Archa Rates"] as const;
 
+  const [searchQuery, setSearchQuery] = useState("");
+
   const [uploadModal, setShowUploadModal] = useState(false);
 
   const [selectedTab, setSelectedTab] =
     useState<(typeof tabs)[number]>("Labour");
+
+  const search = searchQuery.toLowerCase().trim();
+
+  const filteredLabourRates = labourRates.filter((rate) => {
+    if (!search) return true;
+
+    return (
+      String(rate.employeeNumber).includes(search) ||
+      rate.baseWorkClass.toLowerCase().includes(search) ||
+      rate.baseClassName.toLowerCase().includes(search) ||
+      String(rate.rate).includes(search) ||
+      String(rate.saturdayRate).includes(search) ||
+      String(rate.sundayRate).includes(search)
+    );
+  });
+
+  const filteredEquipmentRates = equipmentRates.filter((rate) => {
+    if (!search) return true;
+
+    return (
+      rate.equipmentNumber.toLowerCase().includes(search) ||
+      rate.makeModelYear.toLowerCase().includes(search) ||
+      rate.description.toLowerCase().includes(search) ||
+      String(rate.rate).includes(search) ||
+      String(rate.horsePower ?? "").includes(search)
+    );
+  });
+
+  const filteredMaterialRates = materialRates.filter((rate) => {
+    if (!search) return true;
+
+    return (
+      rate.type.toLowerCase().includes(search) ||
+      rate.unit.toLowerCase().includes(search)
+    );
+  });
 
   return (
     <section className="flex min-h-0 flex-1 flex-col overflow-hidden rounded-md border-[3px] border-black">
@@ -35,7 +73,10 @@ export default function RateTable({
           <button
             key={tab}
             type="button"
-            onClick={() => setSelectedTab(tab)}
+            onClick={() => {
+              setSelectedTab(tab);
+              setSearchQuery("");
+            }}
             className={`
               cursor-pointer
               text-3xl
@@ -66,6 +107,8 @@ export default function RateTable({
         <input
           id="dashboard-search"
           type="search"
+          value={searchQuery}
+          onChange={(event) => setSearchQuery(event.target.value)}
           placeholder="Search"
           className="max-w-sm rounded-md border-[3px] border-black px-3 py-2 text-xl text-park-gray outline-none transition focus:border-park-green"
         />
@@ -87,16 +130,18 @@ export default function RateTable({
       </Modal>
 
       <div className="mx-2 min-h-0 flex-1 overflow-y-auto pb-10">
-        {selectedTab === "Labour" && <LabourTable labourRates={labourRates} />}
+        {selectedTab === "Labour" && (
+          <LabourTable labourRates={filteredLabourRates} />
+        )}
 
         {selectedTab === "Equipment" && (
-          <EquipmentTable equipmentRates={equipmentRates} />
+          <EquipmentTable equipmentRates={filteredEquipmentRates} />
         )}
         {selectedTab === "Materials" && (
-          <MaterialsTable materials={materialRates} />
+          <MaterialsTable materials={filteredMaterialRates} />
         )}
         {selectedTab === "Archa Rates" && (
-          <MaterialsTable materials={materialRates} />
+          <MaterialsTable materials={filteredMaterialRates} />
         )}
       </div>
     </section>
