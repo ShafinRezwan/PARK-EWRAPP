@@ -300,6 +300,9 @@ export async function POST(request: Request) {
         });
         console.log("EQUIPMENT HEADERS:", Object.keys(rows[0] ?? {}));
 console.log("FIRST EQUIPMENT ROW:", rows[0]);
+
+        
+
       if (rows.length === 0) {
         return NextResponse.json(
           { error: "The spreadsheet contains no equipment-rate rows." },
@@ -308,11 +311,11 @@ console.log("FIRST EQUIPMENT ROW:", rows[0]);
       }
 
       const parsedRows = rows.map((row, index) => {
-  const normalized = normalizeRow(
+ const normalized = normalizeRow(
   row as Record<string, unknown>,
 );
 
-  const equipmentNumber = String(
+const equipmentNumber = String(
   getValue(normalized, [
     "Equipment #",
     "Equipment Number",
@@ -324,6 +327,7 @@ const makeModelYear = String(
   getValue(normalized, [
     "Make Model Year",
     "Make, Model, Year",
+    "Make, Model,Year",
     "Make/Model/Year",
   ]),
 ).trim();
@@ -347,13 +351,22 @@ const equipmentRate = Number(
 const horsePowerRaw = getValue(normalized, [
   "Horsepower",
   "Horse Power",
+  "HORSEPOWER",
   "HP",
 ]);
 
-  const horsePower =
+const horsePower =
   horsePowerRaw === ""
     ? null
     : Number(horsePowerRaw);
+
+console.log("PARSED EQUIPMENT:", {
+  equipmentNumber,
+  makeModelYear,
+  description,
+  equipmentRate,
+  horsePower,
+});
 
   const spreadsheetRow = index + 2;
 
@@ -395,6 +408,33 @@ const horsePowerRaw = getValue(normalized, [
     equipmentRate,
     horsePower,
   };
+});
+
+await runInBatches(parsedRows, 50, async (batch) => {
+  await prisma.$transaction(
+    batch.map((row) =>
+      prisma.equipmentRate.upsert({
+        where: {
+          equipmentNumber: row.equipmentNumber,
+        },
+
+        update: {
+          makeModelYear: row.makeModelYear,
+          description: row.description,
+          equipmentRate: row.equipmentRate,
+          horsePower: row.horsePower,
+        },
+
+        create: {
+          equipmentNumber: row.equipmentNumber,
+          makeModelYear: row.makeModelYear,
+          description: row.description,
+          equipmentRate: row.equipmentRate,
+          horsePower: row.horsePower,
+        },
+      }),
+    ),
+  );
 });
 
       return NextResponse.json({
