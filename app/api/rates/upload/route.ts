@@ -17,9 +17,14 @@ type LabourSpreadsheetRow = {
 type EquipmentSpreadsheetRow = {
   "Equipment #"?: unknown;
   "Make,Model,Year"?: unknown;
+   "Make, Model, Year"?: unknown;
+   "Make, Model & Year"?: unknown;
+
   Description?: unknown;
   "Udf Archa Rate"?: unknown;
   HorsePower?: unknown;
+  "Horse Power"?: unknown;
+  Horsepower?: unknown;
 };
 
 type MaterialSpreadsheetRow = {
@@ -225,9 +230,11 @@ export async function POST(request: Request) {
           row["Equipment #"] ?? "",
         ).trim();
 
-        const makeModelYear = String(
-          row["Make,Model,Year"] ?? "",
-        ).trim();
+       const makeModelYear = String(
+  row["Make,Model,Year"] ??
+  row["Make, Model, Year"] ??
+  "",
+).trim();
 
         const description = String(
           row.Description ?? "",
@@ -237,7 +244,11 @@ export async function POST(request: Request) {
           row["Udf Archa Rate"],
         );
 
-        const horsePowerRaw = row.HorsePower;
+        const horsePowerRaw =
+  row.HorsePower ??
+  row["Horse Power"] ??
+  row["Horsepower"] ??
+  "";
 
         const horsePower =
           horsePowerRaw === "" ||
