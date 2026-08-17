@@ -32,6 +32,46 @@ type MaterialSpreadsheetRow = {
   Unit?: unknown;
 };
 
+
+function normalizeHeader(header: string) {
+  return header
+    .toLowerCase()
+    .replace(/[^a-z0-9]/g, "");
+}
+
+function normalizeRow(
+  row: Record<string, unknown>,
+): Record<string, unknown> {
+  return Object.fromEntries(
+    Object.entries(row).map(([key, value]) => [
+      normalizeHeader(key),
+      value,
+    ]),
+  );
+}
+
+function getValue(
+  row: Record<string, unknown>,
+  aliases: string[],
+) {
+  for (const alias of aliases) {
+    const normalizedAlias = normalizeHeader(alias);
+
+    const value = row[normalizedAlias];
+
+    if (
+      value !== undefined &&
+      value !== null &&
+      value !== ""
+    ) {
+      return value;
+    }
+  }
+
+  return "";
+}
+
+
 async function runInBatches<T>(
   rows: T[],
   batchSize: number,
@@ -43,6 +83,7 @@ async function runInBatches<T>(
   }
 }
 
+
 export async function POST(request: Request) {
   try {
     const formData = await request.formData();
@@ -50,6 +91,8 @@ export async function POST(request: Request) {
     const uploadedFile = formData.get("file");
     const category = formData.get("category");
 
+
+    
     if (!(uploadedFile instanceof File)) {
       return NextResponse.json(
         { error: "No valid spreadsheet was uploaded." },
@@ -121,66 +164,104 @@ export async function POST(request: Request) {
       }
 
       const parsedRows = rows.map((row, index) => {
-        const employeeNumber = Number(row["Employee #"]);
-        const baseWorkClass = String(
-          row["Base Work Class"] ?? "",
-        ).trim();
+  const normalized = normalizeRow(
+    row as Record<string, unknown>,
+  );
 
-        const baseClassName = String(
-          row["Base Class Name"] ?? "",
-        ).trim();
+  const employeeNumber = Number(
+    getValue(normalized, [
+      "Employee #",
+      "Employee Number",
+      "Employee No",
+      "Employee ID",
+    ]),
+  );
 
-        const rate = Number(row.Rate);
-        const saturdayRate = Number(row["Saturday Rate"]);
-        const sundayRate = Number(row["Sunday Rate"]);
+  const baseWorkClass = String(
+    getValue(normalized, [
+      "Base Work Class",
+      "Work Class",
+      "Base Class",
+    ]),
+  ).trim();
 
-        const spreadsheetRow = index + 2;
+  const baseClassName = String(
+    getValue(normalized, [
+      "Base Class Name",
+      "Class Name",
+      "Classification",
+    ]),
+  ).trim();
 
-        if (!Number.isInteger(employeeNumber) || employeeNumber <= 0) {
-          throw new Error(
-            `Row ${spreadsheetRow}: Employee # must be a positive whole number.`,
-          );
-        }
+  const rate = Number(
+    getValue(normalized, [
+      "Rate",
+      "Regular Rate",
+      "Hourly Rate",
+    ]),
+  );
 
-        if (!baseWorkClass) {
-          throw new Error(
-            `Row ${spreadsheetRow}: Base Work Class is required.`,
-          );
-        }
+  const saturdayRate = Number(
+    getValue(normalized, [
+      "Saturday Rate",
+      "Sat Rate",
+    ]),
+  );
 
-        if (!baseClassName) {
-          throw new Error(
-            `Row ${spreadsheetRow}: Base Class Name is required.`,
-          );
-        }
+  const sundayRate = Number(
+    getValue(normalized, [
+      "Sunday Rate",
+      "Sun Rate",
+    ]),
+  );
 
-        if (!Number.isFinite(rate) || rate < 0) {
-          throw new Error(
-            `Row ${spreadsheetRow}: Rate is invalid.`,
-          );
-        }
+  const spreadsheetRow = index + 2;
 
-        if (!Number.isFinite(saturdayRate) || saturdayRate < 0) {
-          throw new Error(
-            `Row ${spreadsheetRow}: Saturday Rate is invalid.`,
-          );
-        }
+  if (!Number.isInteger(employeeNumber) || employeeNumber <= 0) {
+    throw new Error(
+      `Row ${spreadsheetRow}: Employee # must be a positive whole number.`,
+    );
+  }
 
-        if (!Number.isFinite(sundayRate) || sundayRate < 0) {
-          throw new Error(
-            `Row ${spreadsheetRow}: Sunday Rate is invalid.`,
-          );
-        }
+  if (!baseWorkClass) {
+    throw new Error(
+      `Row ${spreadsheetRow}: Base Work Class is required.`,
+    );
+  }
 
-        return {
-          employeeNumber,
-          baseWorkClass,
-          baseClassName,
-          rate,
-          saturdayRate,
-          sundayRate,
-        };
-      });
+  if (!baseClassName) {
+    throw new Error(
+      `Row ${spreadsheetRow}: Base Class Name is required.`,
+    );
+  }
+
+  if (!Number.isFinite(rate) || rate < 0) {
+    throw new Error(
+      `Row ${spreadsheetRow}: Rate is invalid.`,
+    );
+  }
+
+  if (!Number.isFinite(saturdayRate) || saturdayRate < 0) {
+    throw new Error(
+      `Row ${spreadsheetRow}: Saturday Rate is invalid.`,
+    );
+  }
+
+  if (!Number.isFinite(sundayRate) || sundayRate < 0) {
+    throw new Error(
+      `Row ${spreadsheetRow}: Sunday Rate is invalid.`,
+    );
+  }
+
+  return {
+    employeeNumber,
+    baseWorkClass,
+    baseClassName,
+    rate,
+    saturdayRate,
+    sundayRate,
+  };
+});
 
       await runInBatches(parsedRows, 100, async (batch) => {
   await prisma.$transaction(
@@ -227,102 +308,93 @@ console.log("FIRST EQUIPMENT ROW:", rows[0]);
       }
 
       const parsedRows = rows.map((row, index) => {
-        const equipmentNumber = String(
-          row["Equipment #"] ?? "",
-        ).trim();
+  const normalized = normalizeRow(
+  row as Record<string, unknown>,
+);
 
-       const makeModelYear = String(
-  row["Make,Model,Year"] ??
-  row["Make, Model, Year"] ??
-  "",
+  const equipmentNumber = String(
+  getValue(normalized, [
+    "Equipment #",
+    "Equipment Number",
+    "Equipment No",
+  ]),
 ).trim();
 
-        const description = String(
-          row.Description ?? "",
-        ).trim();
+const makeModelYear = String(
+  getValue(normalized, [
+    "Make Model Year",
+    "Make, Model, Year",
+    "Make/Model/Year",
+  ]),
+).trim();
 
-        const equipmentRate = Number(
-          row["Udf Archa Rate"],
-        );
+const description = String(
+  getValue(normalized, [
+    "Description",
+    "Equipment Description",
+  ]),
+).trim();
 
-        const horsePowerRaw =
-  row.HorsePower ??
-  row["Horse Power"] ??
-  row["Horsepower"] ??
-  "";
+const equipmentRate = Number(
+  getValue(normalized, [
+    "Udf Archa Rate",
+    "Archa Rate",
+    "Equipment Rate",
+    "Rate",
+  ]),
+);
 
-        const horsePower =
-          horsePowerRaw === "" ||
-          horsePowerRaw === null ||
-          horsePowerRaw === undefined
-            ? null
-            : Number(horsePowerRaw);
+const horsePowerRaw = getValue(normalized, [
+  "Horsepower",
+  "Horse Power",
+  "HP",
+]);
 
-        const spreadsheetRow = index + 2;
+  const horsePower =
+  horsePowerRaw === ""
+    ? null
+    : Number(horsePowerRaw);
 
-        if (!equipmentNumber) {
-          throw new Error(
-            `Row ${spreadsheetRow}: Equipment # is required.`,
-          );
-        }
+  const spreadsheetRow = index + 2;
 
+  if (!equipmentNumber) {
+    throw new Error(
+      `Row ${spreadsheetRow}: Equipment # is required.`,
+    );
+  }
 
-        if (!description) {
-          throw new Error(
-            `Row ${spreadsheetRow}: Description is required.`,
-          );
-        }
+  if (!description) {
+    throw new Error(
+      `Row ${spreadsheetRow}: Description is required.`,
+    );
+  }
 
-        if (
-          !Number.isFinite(equipmentRate) ||
-          equipmentRate < 0
-        ) {
-          throw new Error(
-            `Row ${spreadsheetRow}: Equipment rate is invalid.`,
-          );
-        }
+  if (
+    !Number.isFinite(equipmentRate) ||
+    equipmentRate < 0
+  ) {
+    throw new Error(
+      `Row ${spreadsheetRow}: Equipment rate is invalid.`,
+    );
+  }
 
-        if (
-          horsePower !== null &&
-          (!Number.isInteger(horsePower) || horsePower < 0)
-        ) {
-          throw new Error(
-            `Row ${spreadsheetRow}: Horse Power is invalid.`,
-          );
-        }
+  if (
+    horsePower !== null &&
+    (!Number.isInteger(horsePower) ||
+      horsePower < 0)
+  ) {
+    throw new Error(
+      `Row ${spreadsheetRow}: Horse Power is invalid.`,
+    );
+  }
 
-        return {
-          equipmentNumber,
-          makeModelYear,
-          description,
-          equipmentRate,
-          horsePower,
-        };
-      });
-
-      await runInBatches(parsedRows, 100, async (batch) => {
-  await prisma.$transaction(
-    batch.map((row) =>
-      prisma.equipmentRate.upsert({
-        where: {
-          equipmentNumber: row.equipmentNumber,
-        },
-        update: {
-          makeModelYear: row.makeModelYear,
-          description: row.description,
-          equipmentRate: row.equipmentRate,
-          horsePower: row.horsePower,
-        },
-        create: {
-          equipmentNumber: row.equipmentNumber,
-          makeModelYear: row.makeModelYear,
-          description: row.description,
-          equipmentRate: row.equipmentRate,
-          horsePower: row.horsePower,
-        },
-      }),
-    ),
-  );
+  return {
+    equipmentNumber,
+    makeModelYear,
+    description,
+    equipmentRate,
+    horsePower,
+  };
 });
 
       return NextResponse.json({
@@ -349,36 +421,48 @@ console.log("FIRST EQUIPMENT ROW:", rows[0]);
       }
 
       const parsedRows = rows.map((row, index) => {
-        const materialType = String(
-          row.Description ?? "",
-        ).trim();
+  const normalized = normalizeRow(
+    row as Record<string, unknown>,
+  );
 
-        const materialUnit = String(
-          row.Unit ?? "",
-        ).trim();
+  const materialType = String(
+    getValue(normalized, [
+      "Description",
+      "Material",
+      "Material Description",
+      "Material Type",
+      "Type",
+    ]),
+  ).trim();
 
+  const materialUnit = String(
+    getValue(normalized, [
+      "Unit",
+      "Material Unit",
+      "UOM",
+      "Unit of Measure",
+    ]),
+  ).trim();
 
-        const spreadsheetRow = index + 2;
+  const spreadsheetRow = index + 2;
 
-        if (!materialType) {
-          throw new Error(
-            `Row ${spreadsheetRow}: Description is required.`,
-          );
-        }
+  if (!materialType) {
+    throw new Error(
+      `Row ${spreadsheetRow}: Description is required.`,
+    );
+  }
 
-        if (!materialUnit) {
-          throw new Error(
-            `Row ${spreadsheetRow}: Unit is required.`,
-          );
-        }
+  if (!materialUnit) {
+    throw new Error(
+      `Row ${spreadsheetRow}: Unit is required.`,
+    );
+  }
 
-       
-
-        return {
-          materialType,
-          materialUnit,
-        };
-      });
+  return {
+    materialType,
+    materialUnit,
+  };
+});
 
       await runInBatches(parsedRows, 100, async (batch) => {
   await prisma.$transaction(
