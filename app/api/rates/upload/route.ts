@@ -27,6 +27,17 @@ type MaterialSpreadsheetRow = {
   Unit?: unknown;
 };
 
+async function runInBatches<T>(
+  rows: T[],
+  batchSize: number,
+  handler: (batch: T[]) => Promise<void>,
+) {
+  for (let i = 0; i < rows.length; i += batchSize) {
+    const batch = rows.slice(i, i + batchSize);
+    await handler(batch);
+  }
+}
+
 export async function POST(request: Request) {
   try {
     const formData = await request.formData();
@@ -166,23 +177,25 @@ export async function POST(request: Request) {
         };
       });
 
-      await prisma.$transaction(
-        parsedRows.map((row) =>
-          prisma.labourRate.upsert({
-            where: {
-              employeeNumber: row.employeeNumber,
-            },
-            update: {
-              baseWorkClass: row.baseWorkClass,
-              baseClassName: row.baseClassName,
-              rate: row.rate,
-              saturdayRate: row.saturdayRate,
-              sundayRate: row.sundayRate,
-            },
-            create: row,
-          }),
-        ),
-      );
+      await runInBatches(parsedRows, 100, async (batch) => {
+  await prisma.$transaction(
+    batch.map((row) =>
+      prisma.labourRate.upsert({
+        where: {
+          employeeNumber: row.employeeNumber,
+        },
+        update: {
+          baseWorkClass: row.baseWorkClass,
+          baseClassName: row.baseClassName,
+          rate: row.rate,
+          saturdayRate: row.saturdayRate,
+          sundayRate: row.sundayRate,
+        },
+        create: row,
+      }),
+    ),
+  );
+});
 
       return NextResponse.json({
         message: `${parsedRows.length} labour rates uploaded successfully.`,
@@ -275,28 +288,30 @@ export async function POST(request: Request) {
         };
       });
 
-      await prisma.$transaction(
-        parsedRows.map((row) =>
-          prisma.equipmentRate.upsert({
-            where: {
-              equipmentNumber: row.equipmentNumber,
-            },
-            update: {
-              makeModelYear: row.makeModelYear,
-              description: row.description,
-              equipmentRate: row.equipmentRate,
-              horsePower: row.horsePower,
-            },
-            create: {
-              equipmentNumber: row.equipmentNumber,
-              makeModelYear: row.makeModelYear,
-              description: row.description,
-              equipmentRate: row.equipmentRate,
-              horsePower: row.horsePower,
-            },
-          }),
-        ),
-      );
+      await runInBatches(parsedRows, 100, async (batch) => {
+  await prisma.$transaction(
+    batch.map((row) =>
+      prisma.equipmentRate.upsert({
+        where: {
+          equipmentNumber: row.equipmentNumber,
+        },
+        update: {
+          makeModelYear: row.makeModelYear,
+          description: row.description,
+          equipmentRate: row.equipmentRate,
+          horsePower: row.horsePower,
+        },
+        create: {
+          equipmentNumber: row.equipmentNumber,
+          makeModelYear: row.makeModelYear,
+          description: row.description,
+          equipmentRate: row.equipmentRate,
+          horsePower: row.horsePower,
+        },
+      }),
+    ),
+  );
+});
 
       return NextResponse.json({
         message: `${parsedRows.length} equipment rates uploaded successfully.`,
@@ -353,24 +368,25 @@ export async function POST(request: Request) {
         };
       });
 
-      await prisma.$transaction(
-        parsedRows.map((row) =>
-          prisma.materialRate.upsert({
-            where: {
-              materialType_materialUnit: {
-                materialType: row.materialType,
-                materialUnit: row.materialUnit,
-              },
-            },
-            update: {
-            },
-            create: {
-              materialType: row.materialType,
-              materialUnit: row.materialUnit,
-            },
-          }),
-        ),
-      );
+      await runInBatches(parsedRows, 100, async (batch) => {
+  await prisma.$transaction(
+    batch.map((row) =>
+      prisma.materialRate.upsert({
+        where: {
+          materialType_materialUnit: {
+            materialType: row.materialType,
+            materialUnit: row.materialUnit,
+          },
+        },
+        update: {},
+        create: {
+          materialType: row.materialType,
+          materialUnit: row.materialUnit,
+        },
+      }),
+    ),
+  );
+});
 
       return NextResponse.json({
         message: `${parsedRows.length} material rates uploaded successfully.`,
