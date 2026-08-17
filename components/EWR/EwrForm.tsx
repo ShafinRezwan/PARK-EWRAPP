@@ -32,9 +32,15 @@ import { LabourRate, EquipmentRate, MaterialRate } from "@/lib/rates.js";
 type EWRFormProps = {
   formData: EWRFormData;
   setFormData: Dispatch<SetStateAction<EWRFormData>>;
+
   labourRates: LabourRate[];
   equipmentRates: EquipmentRate[];
   materialRates: MaterialRate[];
+
+  reportId: string | null;
+
+  ewrNumberError: string;
+  setEwrNumberError: Dispatch<SetStateAction<string>>;
 };
 
 type SectionHeaderProps = {
@@ -123,11 +129,19 @@ export default function EWRForm({
   labourRates,
   equipmentRates,
   materialRates,
+  reportId,
+  ewrNumberError,
+  setEwrNumberError,
 }: EWRFormProps) {
   const updateMainField = (
     field: keyof Pick<
       EWRFormData,
-      "recipient" | "jobNumber" | "date" | "jobName" | "description"
+      | "recipient"
+      | "jobNumber"
+      | "date"
+      | "jobName"
+      | "description"
+      | "ewrNumber"
     >,
     value: string,
   ) => {
@@ -309,6 +323,45 @@ export default function EWRForm({
     });
   };
 
+  const checkEwrNumber = async (ewrNumber: string) => {
+    if (!ewrNumber.trim() || !formData.jobNumber.trim()) {
+      setEwrNumberError("");
+      return;
+    }
+
+    try {
+      const response = await fetch("/api/ewr/check-number", {
+        method: "POST",
+
+        headers: {
+          "Content-Type": "application/json",
+        },
+
+        body: JSON.stringify({
+          jobNumber: formData.jobNumber,
+          ewrNumber,
+          reportId,
+        }),
+      });
+
+      const result = await response.json();
+
+      if (!response.ok) {
+        throw new Error(result.error ?? "Unable to check EWR number.");
+      }
+
+      if (result.exists) {
+        setEwrNumberError(
+          `EWR #${ewrNumber} already exists for Job ${formData.jobNumber}.`,
+        );
+      } else {
+        setEwrNumberError("");
+      }
+    } catch (error) {
+      console.error("EWR number check failed:", error);
+    }
+  };
+
   const getLabourMatches = (searchValue: string) => {
     const search = searchValue.toLowerCase().trim();
 
@@ -358,9 +411,16 @@ export default function EWRForm({
 
     return equipmentRates
       .filter((equipment) => {
+        const equipmentNumber = equipment.equipmentNumber.toLowerCase();
+
+        const description = equipment.description.toLowerCase();
+
+        const makeModelYear = equipment.makeModelYear.toLowerCase();
+
         return (
-          equipment.equipmentNumber.toString() ||
-          equipment.description.toLowerCase()
+          equipmentNumber.includes(search) ||
+          description.includes(search) ||
+          makeModelYear.includes(search)
         );
       })
       .slice(0, 8);
@@ -432,7 +492,7 @@ export default function EWRForm({
       className="mx-auto w-full max-w-4xl space-y-7"
     >
       <section className="space-y-3">
-        <div className="grid grid-cols-1 gap-6 md:grid-cols-5">
+        <div className="grid grid-cols-1 gap-6 md:grid-cols-6">
           <Field label="To:" className="col-span-3">
             <input
               value={formData.recipient}
@@ -453,6 +513,30 @@ export default function EWRForm({
             />
           </Field>
 
+          <Field label="EWR #:">
+            <input
+              type="number"
+              min="9801"
+              value={formData.ewrNumber}
+              onChange={(event) => {
+                const value = event.target.value;
+
+                updateMainField("ewrNumber", value);
+
+                checkEwrNumber(value);
+              }}
+              className={`${inputClassName} ${
+                ewrNumberError ? "border-red-600 focus:border-red-600" : ""
+              }`}
+            />
+
+            {ewrNumberError && (
+              <p className="mt-1 text-sm font-semibold text-red-600">
+                {ewrNumberError}
+              </p>
+            )}
+          </Field>
+
           <Field label="Date:">
             <Popover>
               <PopoverTrigger
@@ -461,8 +545,8 @@ export default function EWRForm({
               >
                 <span>
                   {formData.date
-                    ? format(new Date(`${formData.date}`), "MMM dd, yyyy")
-                    : "Pick a date"}
+                    ? format(new Date(`${formData.date}`), "MM/dd/yy")
+                    : "Date"}
                 </span>
 
                 <CalendarIcon className="h-5 w-5 opacity-70" />

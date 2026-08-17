@@ -8,7 +8,7 @@ import { useRouter } from "next/navigation";
 type EWRPreviewProps = {
   formData: EWRFormData;
   reportId: string | null;
-  ewrNumber: string | null;
+  ewrNumber: string;
 };
 
 const moneyFormatter = new Intl.NumberFormat("en-US", {
@@ -86,6 +86,7 @@ export default function EWRPreview({
         recipient: formData.recipient,
         date: formData.date,
         description: formData.description,
+        ewrNumber: formData.ewrNumber,
 
         labour: formData.labour,
         equipment: formData.equipment,
@@ -183,7 +184,7 @@ export default function EWRPreview({
 
                   <div className="pt-[8%] text-center">
                     <h1 className="text-[14px] font-bold uppercase tracking-tight">
-                      Extra Work Report # {ewrNumber ?? ""}
+                      Extra Work Report # {formData.ewrNumber}
                     </h1>
                   </div>
 
@@ -330,8 +331,8 @@ export default function EWRPreview({
         <button
           type="button"
           onClick={handleSave}
-          disabled={isSaving}
-          className="rounded-md bg-sky-600 px-3 py-2.5 text-lg font-semibold text-white transition hover:bg-sky-700"
+          disabled={isSaving || !!ewrNumber}
+          className="rounded-md bg-sky-600 px-3 py-2.5 text-lg font-semibold text-white transition hover:bg-sky-700 disabled:cursor-not-allowed disabled:opacity-50"
         >
           {isSaving ? "SAVING..." : "SAVE"}
         </button>

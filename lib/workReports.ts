@@ -81,6 +81,7 @@ export async function getWorkReportById(
       jobName: report.job?.jobName ?? "",
       date: report.workDate.toISOString().split("T")[0],
       description: report.description,
+      ewrNumber: report.ewrNumber ?? "",
 
       labour: report.labourEntries.map((row) => ({
         id: row.id,

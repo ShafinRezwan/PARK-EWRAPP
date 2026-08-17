@@ -20,7 +20,7 @@ type CreateEWRBody = {
   recipient?: string;
   date: string;
   description?: string;
-
+   ewrNumber?: string;
   labour?: LabourFormRow[];
   equipment?: EquipmentFormRow[];
   materials?: MaterialFormRow[];
@@ -37,6 +37,7 @@ export async function POST(request: Request) {
 
     const {
       jobNumber,
+       ewrNumber,
       recipient,
       date,
       description,
@@ -99,25 +100,73 @@ export async function POST(request: Request) {
     // Generate EWR number
     // -----------------------------------------
 
-    const latestReport = await prisma.extraWorkReport.findFirst({
-      orderBy: {
-        createdAt: "desc",
+   // -----------------------------------------
+// Generate EWR number for THIS job
+// -----------------------------------------
+
+const reportsForJob = await prisma.extraWorkReport.findMany({
+  where: {
+    jobId: job.id,
+  },
+
+  select: {
+    ewrNumber: true,
+  },
+});
+
+const usedNumbers = reportsForJob
+  .map((report) => Number(report.ewrNumber))
+  .filter((number) => Number.isFinite(number));
+
+const nextEwrNumber =
+  usedNumbers.length === 0
+    ? 9801
+    : Math.max(...usedNumbers) + 1;
+
+// If the user manually entered an EWR number,
+// use it. Otherwise use the next number for the job.
+const finalEwrNumber =
+  ewrNumber?.trim() || String(nextEwrNumber);
+
+// Validate the number
+const numericEwrNumber = Number(finalEwrNumber);
+
+if (
+  !Number.isInteger(numericEwrNumber) ||
+  numericEwrNumber < 9801
+) {
+  return NextResponse.json(
+    {
+      error: "EWR number must be 9801 or greater.",
+    },
+    {
+      status: 400,
+    },
+  );
+}
+
+// Make sure this EWR number isn't already used
+// by another report on THIS job.
+const duplicateReport =
+  await prisma.extraWorkReport.findUnique({
+    where: {
+      jobId_ewrNumber: {
+        jobId: job.id,
+        ewrNumber: finalEwrNumber,
       },
+    },
+  });
 
-      select: {
-        ewrNumber: true,
-      },
-    });
-
-    let nextEwrNumber = "9800";
-
-    if (latestReport) {
-      const previousNumber = Number(latestReport.ewrNumber);
-
-      if (Number.isFinite(previousNumber)) {
-        nextEwrNumber = String(previousNumber + 1);
-      }
-    }
+if (duplicateReport) {
+  return NextResponse.json(
+    {
+      error: `EWR #${finalEwrNumber} already exists for Job ${job.jobNumber}.`,
+    },
+    {
+      status: 409,
+    },
+  );
+}
 
     // -----------------------------------------
     // Labour
@@ -226,7 +275,7 @@ export async function POST(request: Request) {
 
     const report = await prisma.extraWorkReport.create({
       data: {
-        ewrNumber: nextEwrNumber,
+        ewrNumber: finalEwrNumber,
 
         workDate: new Date(`${date}T00:00:00`),
 

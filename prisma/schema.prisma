@@ -101,7 +101,7 @@ model Job {
 
 model ExtraWorkReport {
   id          String       @id @default(cuid())
-  ewrNumber   String       @unique
+  ewrNumber   String
   workDate    DateTime
   jobId       String?
   job         Job?         @relation(fields: [jobId], references: [id], onDelete: Restrict)
@@ -119,6 +119,7 @@ model ExtraWorkReport {
   user      User?    @relation(fields: [userId], references: [id])
   userId    String?
 
+  @@unique([jobId, ewrNumber])
   @@index([jobId])
   @@index([status])
   @@index([workDate])

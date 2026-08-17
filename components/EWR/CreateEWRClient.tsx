@@ -17,6 +17,7 @@ const initialFormData: EWRFormData = {
   date: "",
   jobName: "",
   description: "",
+  ewrNumber: "",
 
   labour: [
     {
@@ -125,10 +126,15 @@ export default function CreateEWRClient({
   initialParams,
   ewrNumber,
 }: Props) {
+  const [ewrNumberError, setEwrNumberError] = useState("");
+
   const [formData, setFormData] = useState<EWRFormData>(() => {
     // Opening a saved EWR
     if (existingReport) {
-      return existingReport;
+      return {
+        ...existingReport,
+        ewrNumber: existingReport.ewrNumber || ewrNumber || "",
+      };
     }
 
     // Creating a new EWR from the modal
@@ -139,11 +145,14 @@ export default function CreateEWRClient({
         jobNumber: initialParams.jobNumber,
         jobName: initialParams.jobName,
         date: initialParams.date,
+        ewrNumber: ewrNumber ?? "",
       };
     }
 
-    // Creating a completely blank EWR
-    return initialFormData;
+    return {
+      ...initialFormData,
+      ewrNumber: ewrNumber ?? "",
+    };
   });
 
   return (
@@ -156,6 +165,9 @@ export default function CreateEWRClient({
             labourRates={labourRates}
             equipmentRates={equipmentRates}
             materialRates={materialRates}
+            reportId={reportId}
+            ewrNumberError={ewrNumberError}
+            setEwrNumberError={setEwrNumberError}
           />
         </section>
 
@@ -164,7 +176,7 @@ export default function CreateEWRClient({
             <EWRPreview
               formData={formData}
               reportId={reportId}
-              ewrNumber={ewrNumber}
+              ewrNumber={ewrNumberError}
             />
           </div>
         </aside>
