@@ -7,10 +7,12 @@ import {
 } from "@/lib/rates";
 
 import { getWorkReportById } from "@/lib/workReports";
+import { getJobs } from "@/lib/jobs";
 
 type Props = {
   searchParams: Promise<{
     id?: string;
+    jobId?: string;
     to?: string;
     jobNumber?: string;
     jobName?: string;
@@ -20,11 +22,12 @@ type Props = {
 export default async function Page({ searchParams }: Props) {
   const params = await searchParams;
 
-  const [labourRates, equipmentRates, materialRates, existingReport] =
+  const [labourRates, equipmentRates, materialRates, jobs, existingReport] =
     await Promise.all([
       getLabourRates(),
       getEquipmentRates(),
       getMaterialRates(),
+      getJobs(),
 
       params.id ? getWorkReportById(params.id) : Promise.resolve(null),
     ]);
@@ -32,6 +35,7 @@ export default async function Page({ searchParams }: Props) {
   return (
     <CreateEWRClient
       labourRates={labourRates}
+      jobs={jobs}
       equipmentRates={equipmentRates}
       materialRates={materialRates}
       existingReport={existingReport?.formData ?? null}
@@ -41,6 +45,7 @@ export default async function Page({ searchParams }: Props) {
         params.id
           ? null
           : {
+              jobId: params.jobId ?? "",
               recipient: params.to ?? "",
               jobNumber: params.jobNumber ?? "",
               jobName: params.jobName ?? "",

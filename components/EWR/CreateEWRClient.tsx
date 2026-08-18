@@ -8,6 +8,7 @@ import EWRPreview from "@/components/EWR/EwrPreview";
 
 import type { EWRFormData } from "@/types/ewr.types";
 import type { LabourRate, EquipmentRate, MaterialRate } from "@/lib/rates";
+import type { Job } from "@/lib/jobs";
 
 const createId = () => crypto.randomUUID();
 
@@ -105,12 +106,14 @@ type Props = {
   labourRates: LabourRate[];
   equipmentRates: EquipmentRate[];
   materialRates: MaterialRate[];
+  jobs: Job[];
 
   existingReport: EWRFormData | null;
   reportId: string | null;
   ewrNumber: string | null;
 
   initialParams: {
+    jobId: string;
     recipient: string;
     jobNumber: string;
     jobName: string;
@@ -120,6 +123,7 @@ type Props = {
 
 export default function CreateEWRClient({
   labourRates,
+  jobs,
   equipmentRates,
   materialRates,
   existingReport,
@@ -142,6 +146,7 @@ export default function CreateEWRClient({
     if (initialParams) {
       return {
         ...initialFormData,
+        jobId: initialParams.jobId,
         recipient: initialParams.recipient,
         jobNumber: initialParams.jobNumber,
         jobName: initialParams.jobName,
@@ -164,6 +169,7 @@ export default function CreateEWRClient({
             formData={formData}
             setFormData={setFormData}
             labourRates={labourRates}
+            jobs={jobs}
             equipmentRates={equipmentRates}
             materialRates={materialRates}
             reportId={reportId}

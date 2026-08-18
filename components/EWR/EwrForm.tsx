@@ -17,6 +17,7 @@ import {
   PopoverContent,
   PopoverTrigger,
 } from "@/components/ui/popover";
+import type { Job } from "@/lib/jobs";
 
 import type {
   EWRFormData,
@@ -32,7 +33,7 @@ import { LabourRate, EquipmentRate, MaterialRate } from "@/lib/rates.js";
 type EWRFormProps = {
   formData: EWRFormData;
   setFormData: Dispatch<SetStateAction<EWRFormData>>;
-
+  jobs: Job[];
   labourRates: LabourRate[];
   equipmentRates: EquipmentRate[];
   materialRates: MaterialRate[];
@@ -126,6 +127,7 @@ function calculateAmount(quantity: string, rate: string) {
 export default function EWRForm({
   formData,
   setFormData,
+  jobs,
   labourRates,
   equipmentRates,
   materialRates,
@@ -150,6 +152,8 @@ export default function EWRForm({
       [field]: value,
     }));
   };
+
+  const [jobDropdownOpen, setJobDropdownOpen] = useState(false);
 
   const updateLabourRow = (
     id: string,
@@ -486,6 +490,27 @@ export default function EWRForm({
     });
   };
 
+  const getJobMatches = (searchValue: string) => {
+    const search = searchValue.toLowerCase().trim();
+
+    if (!search) return [];
+
+    return jobs
+      .filter((job) => {
+        const jobNumber = job.jobNumber.toLowerCase();
+        const jobName = job.jobName.toLowerCase();
+        const year = String(job.year);
+
+        return (
+          jobNumber.includes(search) ||
+          jobName.includes(search) ||
+          year.includes(search)
+        );
+      })
+      .slice(0, 8);
+  };
+  const jobMatches = getJobMatches(formData.jobNumber);
+
   return (
     <form
       onSubmit={(event) => event.preventDefault()}
@@ -503,15 +528,70 @@ export default function EWRForm({
             />
           </Field>
 
-          <Field label="Job #:">
-            <input
-              value={formData.jobNumber}
-              onChange={(event) =>
-                updateMainField("jobNumber", event.target.value)
-              }
-              className={inputClassName}
-            />
-          </Field>
+          <div className="relative">
+            <Field label="Job #:">
+              <input
+                value={formData.jobNumber}
+                onFocus={() => setJobDropdownOpen(true)}
+                onChange={(event) => {
+                  const value = event.target.value;
+
+                  setFormData((current) => ({
+                    ...current,
+
+                    // User is searching again, so the old selected
+                    // database Job should no longer remain attached.
+                    jobId: "",
+                    jobNumber: value,
+                    jobName: "",
+                    recipient: "",
+                  }));
+
+                  setEwrNumberError("");
+                  setJobDropdownOpen(true);
+                }}
+                placeholder="Job # or job name"
+                className={inputClassName}
+              />
+            </Field>
+
+            {jobDropdownOpen && formData.jobNumber && jobMatches.length > 0 && (
+              <div className="absolute left-0 top-full z-50 mt-1 max-h-64 w-[450px] overflow-y-auto rounded-md border-2 border-black bg-white shadow-xl">
+                {jobMatches.map((job) => (
+                  <button
+                    key={job.id}
+                    type="button"
+                    onClick={() => {
+                      setFormData((current) => ({
+                        ...current,
+
+                        jobId: job.id,
+                        jobNumber: job.jobNumber,
+                        jobName: job.jobName,
+                        recipient: job.recipient ?? "",
+                      }));
+
+                      setEwrNumberError("");
+                      setJobDropdownOpen(false);
+                    }}
+                    className="block w-full border-b px-4 py-3 text-left transition last:border-b-0 hover:bg-gray-100"
+                  >
+                    <div className="font-semibold">
+                      {job.jobNumber} — {job.jobName}
+                    </div>
+
+                    <div className="text-sm text-gray-500">
+                      Division {job.division}
+                      {job.recipient ? ` · ${job.recipient}` : ""}
+                      <span className="text-park-green italic">
+                        {job.year ? ` · ${job.year}` : ""}
+                      </span>
+                    </div>
+                  </button>
+                ))}
+              </div>
+            )}
+          </div>
 
           <Field label="EWR #:">
             <input

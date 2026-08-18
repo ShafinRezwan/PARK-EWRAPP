@@ -177,7 +177,14 @@ export default function WorkReportTable({
                   onClick={() => router.push(`/create-ewr?id=${report.id}`)}
                   className="cursor-pointer border-b-2 border-park-gray transition hover:bg-gray-100"
                 >
-                  <td className="px-3 py-3 text-center">{report.jobNumber}</td>
+                  <td className="px-3 py-3 text-center">
+                    <div className="flex items-center justify-center gap-1">
+                      {report.jobNumber}{" "}
+                      <span className="text-sm text-park-green italic ">
+                        ({report.year})
+                      </span>
+                    </div>
+                  </td>
 
                   <td className="px-3 py-3 text-center">{report.jobName}</td>
 

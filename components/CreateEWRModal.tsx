@@ -27,7 +27,7 @@ export default function CreateEWRModal({ jobs, onClose }: Props) {
   const [jobNumber, setJobNumber] = useState("");
   const [jobName, setJobName] = useState("");
   const [date, setDate] = useState<Date | undefined>();
-
+  const [jobId, setJobId] = useState("");
   const [jobDropdownOpen, setJobDropdownOpen] = useState(false);
 
   const matchingJobs = jobs
@@ -47,6 +47,7 @@ export default function CreateEWRModal({ jobs, onClose }: Props) {
     event.preventDefault();
 
     const params = new URLSearchParams({
+      jobId,
       to,
       jobNumber,
       jobName,
@@ -72,7 +73,14 @@ export default function CreateEWRModal({ jobs, onClose }: Props) {
 
             <input
               value={to}
-              onChange={(event) => setTo(event.target.value)}
+              onChange={(event) => {
+                setJobNumber(event.target.value);
+                setJobId("");
+                setJobName("");
+                setTo("");
+
+                setJobDropdownOpen(true);
+              }}
               className="w-full rounded-md border-[3px] border-black px-3 py-2 text-xl"
             />
           </div>
@@ -88,6 +96,7 @@ export default function CreateEWRModal({ jobs, onClose }: Props) {
                 setJobNumber(event.target.value);
 
                 // Clear previously selected job info
+                setJobId("");
                 setJobName("");
                 setTo("");
 
@@ -105,6 +114,7 @@ export default function CreateEWRModal({ jobs, onClose }: Props) {
                     key={job.id}
                     type="button"
                     onClick={() => {
+                      setJobId(job.id);
                       setJobNumber(job.jobNumber);
                       setJobName(job.jobName);
                       setTo(job.recipient ?? "");
@@ -148,9 +158,7 @@ export default function CreateEWRModal({ jobs, onClose }: Props) {
                 type="button"
                 className="flex h-12 w-full items-center justify-between rounded-md border-[3px] border-black bg-white px-4 text-lg font-normal"
               >
-                <span>
-                  {date ? format(date, "MMM dd, yyyy") : "Pick a date"}
-                </span>
+                <span>{date ? format(date, "MM/dd/yy") : "Date"}</span>
 
                 <CalendarIcon className="h-5 w-5 shrink-0 opacity-70" />
               </PopoverTrigger>
@@ -174,7 +182,7 @@ export default function CreateEWRModal({ jobs, onClose }: Props) {
         <div className="mt-8 flex justify-center">
           <button
             type="submit"
-            disabled={!jobNumber || !jobName || !date}
+            disabled={!jobId || !jobNumber || !jobName || !date}
             className="w-full cursor-pointer rounded-md bg-park-green px-20 py-3 text-2xl text-white transition-all duration-300 hover:bg-park-green-dark disabled:cursor-not-allowed disabled:opacity-50"
           >
             Submit
