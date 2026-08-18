@@ -76,51 +76,50 @@ export async function getWorkReportById(
     ewrNumber: report.ewrNumber,
 
     formData: {
-      recipient: report.recipient ?? "",
-      jobNumber: report.job?.jobNumber ?? "",
-      jobName: report.job?.jobName ?? "",
-      date: report.workDate.toISOString().split("T")[0],
-      description: report.description,
-      ewrNumber: report.ewrNumber ?? "",
+  jobId: report.job?.id ?? "",
 
-      labour: report.labourEntries.map((row) => ({
-        id: row.id,
-        classification: row.classification,
-        hours: String(row.hours),
-        rate: String(row.rate),
-      })),
+  recipient: report.recipient ?? "",
+  jobNumber: report.job?.jobNumber ?? "",
+  jobName: report.job?.jobName ?? "",
+  date: report.workDate.toISOString().split("T")[0],
+  description: report.description,
+  ewrNumber: report.ewrNumber ?? "",
 
-      equipment: report.equipmentEntries.map((row) => ({
-        id: row.id,
-        name: row.name,
-        unitNumber: row.unitNumber,
-        hours: String(row.hours),
-        rate: String(row.rate),
-      })),
+  labour: report.labourEntries.map((row) => ({
+    id: row.id,
+    classification: row.classification,
+    hours: String(row.hours),
+    rate: String(row.rate),
+  })),
 
-      materials: report.materialEntries.map((row) => ({
-        id: row.id,
-        name: row.name,
-        unit: row.unit,
-        quantity: String(row.quantity),
-        price: String(row.price),
-      })),
+  equipment: report.equipmentEntries.map((row) => ({
+    id: row.id,
+    name: row.name,
+    unitNumber: row.unitNumber,
+    hours: String(row.hours),
+    rate: String(row.rate),
+  })),
 
-      invoices: report.invoices.map((row) => ({
-        id: row.id,
-        name: row.name,
-        cost: String(row.cost),
-        markup: String(row.markup),
+  materials: report.materialEntries.map((row) => ({
+    id: row.id,
+    name: row.name,
+    unit: row.unit,
+    quantity: String(row.quantity),
+    price: String(row.price),
+  })),
 
-        // Calculate this since your Prisma EWRInvoiceRow
-        // doesn't currently store amount
-        amount: String(
-          Number(row.cost) +
-            Number(row.cost) * (Number(row.markup) / 100),
-        ),
+  invoices: report.invoices.map((row) => ({
+    id: row.id,
+    name: row.name,
+    cost: String(row.cost),
+    markup: String(row.markup),
 
-        invoiceAttachment: null,
-      })),
-    },
-  };
-}
+    amount: String(
+      Number(row.cost) +
+        Number(row.cost) * (Number(row.markup) / 100),
+    ),
+
+    invoiceAttachment: null,
+  })),
+},
+}}

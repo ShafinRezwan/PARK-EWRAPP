@@ -12,6 +12,7 @@ import type { LabourRate, EquipmentRate, MaterialRate } from "@/lib/rates";
 const createId = () => crypto.randomUUID();
 
 const initialFormData: EWRFormData = {
+  jobId: "",
   recipient: "",
   jobNumber: "",
   date: "",

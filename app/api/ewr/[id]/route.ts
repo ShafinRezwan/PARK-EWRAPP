@@ -12,6 +12,7 @@ type InvoiceSaveRow = Omit<InvoiceFormRow, "invoiceAttachment">;
 
 type UpdateEWRBody = {
   jobNumber: string;
+  year: number;
   recipient?: string;
   date: string;
   description?: string;
@@ -38,6 +39,7 @@ export async function PUT(
 
     const {
       jobNumber,
+      year,
       recipient,
       date,
       description,
@@ -77,8 +79,11 @@ export async function PUT(
 
     const job = await prisma.job.findUnique({
       where: {
-        jobNumber: jobNumber.trim(),
+        jobNumber_year: {
+      jobNumber: jobNumber.trim(),
+         year,
       },
+    },
     });
 
     if (!job) {

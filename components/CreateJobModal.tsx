@@ -15,7 +15,7 @@ export default function CreateJobModal({ onClose }: Props) {
 
   const years = Array.from(
     { length: currentYear - 2019 },
-    (_, i) => currentYear - i,
+    (_, i) => currentYear + 2 - i,
   );
 
   const [jobNumber, setJobNumber] = useState("");

@@ -16,11 +16,12 @@ export const runtime = "nodejs";
 type InvoiceSaveRow = Omit<InvoiceFormRow, "invoiceAttachment">;
 
 type CreateEWRBody = {
+  jobId: string;
   jobNumber: string;
   recipient?: string;
   date: string;
   description?: string;
-   ewrNumber?: string;
+  ewrNumber?: string;
   labour?: LabourFormRow[];
   equipment?: EquipmentFormRow[];
   materials?: MaterialFormRow[];
@@ -37,6 +38,7 @@ export async function POST(request: Request) {
 
     const {
       jobNumber,
+      jobId,
        ewrNumber,
       recipient,
       date,
@@ -53,16 +55,16 @@ export async function POST(request: Request) {
     // Validation
     // -----------------------------------------
 
-    if (!jobNumber?.trim()) {
-      return NextResponse.json(
-        {
-          error: "Job number is required.",
-        },
-        {
-          status: 400,
-        },
-      );
-    }
+    if (!jobId?.trim()) {
+  return NextResponse.json(
+    {
+      error: "Job is required.",
+    },
+    {
+      status: 400,
+    },
+  );
+}
 
     if (!date) {
       return NextResponse.json(
@@ -80,10 +82,10 @@ export async function POST(request: Request) {
     // -----------------------------------------
 
     const job = await prisma.job.findUnique({
-      where: {
-        jobNumber: jobNumber.trim(),
-      },
-    });
+  where: {
+    id: jobId,
+  },
+});
 
     if (!job) {
       return NextResponse.json(
@@ -148,12 +150,10 @@ if (
 // Make sure this EWR number isn't already used
 // by another report on THIS job.
 const duplicateReport =
-  await prisma.extraWorkReport.findUnique({
+  await prisma.extraWorkReport.findFirst({
     where: {
-      jobId_ewrNumber: {
-        jobId: job.id,
-        ewrNumber: finalEwrNumber,
-      },
+      jobId: job.id,
+      ewrNumber: finalEwrNumber,
     },
   });
 

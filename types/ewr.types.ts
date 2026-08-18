@@ -39,13 +39,14 @@ export type InvoiceAttachment = {
 };
 
 export type EWRFormData = {
+ jobId: string;
   recipient: string;
   jobNumber: string;
   date: string;
   jobName: string;
   description: string;
   ewrNumber: string;
-  
+
   labour: LabourFormRow[];
   equipment: EquipmentFormRow[];
   materials: MaterialFormRow[];

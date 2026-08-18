@@ -82,6 +82,7 @@ export default function EWRPreview({
       setSaveMessage("");
 
       const payload = {
+        jobId: formData.jobId,
         jobNumber: formData.jobNumber,
         recipient: formData.recipient,
         date: formData.date,

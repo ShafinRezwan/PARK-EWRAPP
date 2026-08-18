@@ -82,7 +82,7 @@ model ToDoTask {
 
 model Job {
   id        String  @id @default(cuid())
-  jobNumber String  @unique
+  jobNumber String
   jobName   String
   division  String
   year      Int
@@ -94,6 +94,9 @@ model Job {
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
+  // Same job number can exist in different years,
+  // but not twice in the same year.
+  @@unique([jobNumber, year])
   @@index([division])
   @@index([year])
   @@index([division, year])

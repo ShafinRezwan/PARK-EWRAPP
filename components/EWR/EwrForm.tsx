@@ -338,7 +338,7 @@ export default function EWRForm({
         },
 
         body: JSON.stringify({
-          jobNumber: formData.jobNumber,
+          jobId: formData.jobId,
           ewrNumber,
           reportId,
         }),

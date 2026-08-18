@@ -5,43 +5,27 @@ export async function POST(request: Request) {
   try {
     const body = await request.json();
 
-    const jobNumber = String(body.jobNumber ?? "").trim();
+    const jobId = String(body.jobId ?? "").trim();
     const ewrNumber = String(body.ewrNumber ?? "").trim();
+
     const reportId = body.reportId
       ? String(body.reportId)
       : null;
 
-    if (!jobNumber || !ewrNumber) {
+    if (!jobId || !ewrNumber) {
       return NextResponse.json({
         exists: false,
       });
     }
 
-    const job = await prisma.job.findUnique({
-      where: {
-        jobNumber,
-      },
-    });
-
-    if (!job) {
-      return NextResponse.json(
-        {
-          error: "Job not found.",
-        },
-        {
-          status: 404,
-        },
-      );
-    }
-
     const existingReport =
       await prisma.extraWorkReport.findFirst({
         where: {
-          jobId: job.id,
+          jobId,
           ewrNumber,
 
-          // Important when editing an existing EWR:
-          // don't treat the current report as a duplicate.
+          // When editing an existing EWR,
+          // don't count itself as a duplicate.
           ...(reportId
             ? {
                 NOT: {
