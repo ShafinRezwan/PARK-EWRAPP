@@ -37,7 +37,7 @@ export default function Sidebar({ user }: SidebarProps) {
     }
   };
   return (
-    <aside className="flex sticky min-h-screen w-64 flex-col border-r-4 border-park-green bg-white">
+    <aside className="flex sticky top-0  h-screen shrink-0  w-64 flex-col border-r-4 border-park-green bg-white">
       <div className="flex justify-center px-5 py-5">
         <Image
           src="/images/ppl-logo.png"
