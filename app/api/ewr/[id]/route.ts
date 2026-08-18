@@ -12,7 +12,7 @@ type InvoiceSaveRow = Omit<InvoiceFormRow, "invoiceAttachment">;
 
 type UpdateEWRBody = {
   jobNumber: string;
-  year: number;
+  jobId:string;
   recipient?: string;
   date: string;
   description?: string;
@@ -38,8 +38,8 @@ export async function PUT(
     const body = (await request.json()) as UpdateEWRBody;
 
     const {
+        jobId,
       jobNumber,
-      year,
       recipient,
       date,
       description,
@@ -78,20 +78,19 @@ export async function PUT(
     }
 
     const job = await prisma.job.findUnique({
-      where: {
-        jobNumber_year: {
-      jobNumber: jobNumber.trim(),
-         year,
-      },
-    },
-    });
+     where: {
+    id: jobId,
+  },
+});
 
     if (!job) {
       return NextResponse.json(
         {
           error: `Job ${jobNumber} could not be found.`,
         },
-        { status: 404 },
+        {
+          status: 404,
+        },
       );
     }
 
