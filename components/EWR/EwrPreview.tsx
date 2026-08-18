@@ -226,12 +226,16 @@ export default function EWRPreview({
                 <ReportSection
                   columns="grid-cols-[62%_10%_10%_18%]"
                   headers={["Classification", "Hrs.", "Rate", "Amount"]}
-                  rows={formData.labour.map((row) => [
-                    row.classification,
-                    row.hours,
-                    row.rate ? moneyFormatter.format(Number(row.rate)) : "",
-                    moneyFormatter.format(calculateAmount(row.hours, row.rate)),
-                  ])}
+                  rows={formData.labour.map((row) => {
+                    const amount = calculateAmount(row.hours, row.rate);
+
+                    return [
+                      row.classification,
+                      row.hours,
+                      row.rate ? moneyFormatter.format(Number(row.rate)) : "",
+                      amount !== 0 ? moneyFormatter.format(amount) : "",
+                    ];
+                  })}
                   totalLabel="Total Labour"
                   total={labourTotal}
                 />
@@ -246,13 +250,17 @@ export default function EWRPreview({
                     "Rate",
                     "Amount",
                   ]}
-                  rows={formData.equipment.map((row) => [
-                    row.name,
-                    row.unitNumber,
-                    row.hours,
-                    row.rate ? moneyFormatter.format(Number(row.rate)) : "",
-                    moneyFormatter.format(calculateAmount(row.hours, row.rate)),
-                  ])}
+                  rows={formData.equipment.map((row) => {
+                    const amount = calculateAmount(row.hours, row.rate);
+
+                    return [
+                      row.name,
+                      row.unitNumber,
+                      row.hours,
+                      row.rate ? moneyFormatter.format(Number(row.rate)) : "",
+                      amount !== 0 ? moneyFormatter.format(amount) : "",
+                    ];
+                  })}
                   totalLabel="Total Equipment"
                   total={equipmentTotal}
                 />
@@ -261,15 +269,17 @@ export default function EWRPreview({
                 <ReportSection
                   columns="grid-cols-[45%_17%_10%_10%_18%]"
                   headers={["Materials", "Unit", "Qty.", "Price", "Amount"]}
-                  rows={formData.materials.map((row) => [
-                    row.name,
-                    row.unit,
-                    row.quantity,
-                    row.price ? moneyFormatter.format(Number(row.price)) : "",
-                    moneyFormatter.format(
-                      calculateAmount(row.quantity, row.price),
-                    ),
-                  ])}
+                  rows={formData.materials.map((row) => {
+                    const amount = calculateAmount(row.quantity, row.price);
+
+                    return [
+                      row.name,
+                      row.unit,
+                      row.quantity,
+                      row.price ? moneyFormatter.format(Number(row.price)) : "",
+                      amount !== 0 ? moneyFormatter.format(amount) : "",
+                    ];
+                  })}
                   totalLabel="Total Materials"
                   total={materialTotal}
                 />
@@ -278,14 +288,16 @@ export default function EWRPreview({
                 <ReportSection
                   columns="grid-cols-[62%_10%_10%_18%]"
                   headers={["Invoices", "Cost", "Mark Up %", "Amount"]}
-                  rows={formData.invoices.map((row) => [
-                    row.name,
-                    row.cost ? moneyFormatter.format(Number(row.cost)) : "",
-                    row.markup,
-                    moneyFormatter.format(
-                      calculateMarkup(row.cost, row.markup),
-                    ),
-                  ])}
+                  rows={formData.invoices.map((row) => {
+                    const amount = calculateMarkup(row.cost, row.markup);
+
+                    return [
+                      row.name,
+                      row.cost ? moneyFormatter.format(Number(row.cost)) : "",
+                      row.markup,
+                      amount !== 0 ? moneyFormatter.format(amount) : "",
+                    ];
+                  })}
                   totalLabel="Total Invoice"
                   total={invoiceTotal}
                 />
