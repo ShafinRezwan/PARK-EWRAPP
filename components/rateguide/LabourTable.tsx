@@ -11,18 +11,24 @@ export default function LabourTable({ labourRates }: Props) {
     <>
       <PageTransition>
         <table className="w-full border-collapse  text-left overflow-hidden ">
-          <thead className="sticky top-0 text-2xl text-park-gray bg-white ">
+          <thead className="sticky top-0 text-2xl text-park-gray bg-white text-center ">
             <tr>
-              <th className="px-3 py-1 text-center underline ">Employee #</th>
-              <th className="px-3 py-1 text-center underline">
-                Base Work Class
+              <th className="px-3 py-1 underline whitespace-nowrap ">
+                Employee #
               </th>
-              <th className="px-3 py-1 text-center underline ">
+              <th className="px-3 py-1 underline whitespace-nowrap ">
                 Base Class Name
               </th>
-              <th className="px-3 py-1 text-center underline">Rate</th>
-              <th className="px-3 py-1 text-center underline">Saturday Rate</th>
-              <th className="px-3 py-1 text-center underline">Sunday Rate</th>
+              <th className="px-3 py-1 underline whitespace-nowrap">
+                Base Work Class
+              </th>
+              <th className="px-3 py-1 underline whitespace-nowrap">Rate</th>
+              <th className="px-3 py-1 underline whitespace-nowrap">
+                Saturday Rate
+              </th>
+              <th className="px-3 py-1 underline whitespace-nowrap">
+                Sunday Rate
+              </th>
             </tr>
           </thead>
           <tbody className="text-xl text-black">
@@ -33,11 +39,11 @@ export default function LabourTable({ labourRates }: Props) {
                 </td>
 
                 <td className="px-3 py-3 text-center">
-                  {labour.baseWorkClass}
+                  {labour.baseClassName}
                 </td>
 
                 <td className="px-3 py-3 text-center">
-                  {labour.baseClassName}
+                  {labour.baseWorkClass}
                 </td>
 
                 <td className="px-3 py-3 text-center">{"$" + labour.rate}</td>

@@ -69,6 +69,9 @@ const labourGrid = "md:grid-cols-[minmax(150px,2fr)_90px_90px_110px_40px]";
 const equipmentGrid =
   "md:grid-cols-[minmax(150px,2fr)_90px_90px_90px_110px_40px]";
 
+const invoiceGrid =
+  "md:grid-cols-[minmax(150px,2fr)_90px_90px_90px_150px_50px]";
+
 function SectionHeader({ title, onAdd, disabled = false }: SectionHeaderProps) {
   return (
     <div className="flex h-10 items-center justify-between rounded-md bg-park-green">
@@ -1078,7 +1081,7 @@ export default function EWRForm({
 
         <div className="space-y-3">
           <div
-            className={`hidden md:grid ${labourGrid} gap-3 font-bold underline`}
+            className={`hidden gap-3 font-bold underline md:grid ${invoiceGrid}`}
           >
             <span className="text-left pl-1">Name</span>
             <span className="text-center">Cost</span>
@@ -1096,7 +1099,7 @@ export default function EWRForm({
             return (
               <div
                 key={row.id}
-                className={`grid grid-cols-1 items-center gap-3 rounded-md border border-zinc-200 p-3 ${labourGrid} md:border-0 md:p-0`}
+                className={`grid grid-cols-1 items-center gap-3 rounded-md border border-zinc-200 p-3 md:border-0 md:p-0 ${invoiceGrid}`}
               >
                 <Field label="Name" className="md:[&>span]:hidden">
                   <input
@@ -1154,6 +1157,34 @@ export default function EWRForm({
                   <span className="whitespace-nowrap text-base font-semibold text-park-green">
                     ${total.toFixed(2)}
                   </span>
+                </div>
+
+                <div className=" ">
+                  <label className="inline-flex cursor-pointer items-center rounded-md bg-orange-400 px-6 py-2 text-sm font-semibold text-white hover:bg-zinc-700">
+                    Attach Invoice
+                    <input
+                      type="file"
+                      accept=".pdf,.jpg,.jpeg,.png,.webp"
+                      className="hidden"
+                      onChange={(event) =>
+                        uploadInvoiceAttachment(row.id, event.target.files?.[0])
+                      }
+                    />
+                  </label>
+
+                  {row.invoiceAttachment && (
+                    <div className="mt-2 flex items-center gap-3 text-sm">
+                      <span>{row.invoiceAttachment.fileName}</span>
+
+                      <button
+                        type="button"
+                        onClick={() => removeInvoiceAttachment(row.id)}
+                        className="font-semibold text-red-600 hover:underline"
+                      >
+                        Remove
+                      </button>
+                    </div>
+                  )}
                 </div>
 
                 <RemoveButton onClick={() => removeRow("invoices", row.id)} />

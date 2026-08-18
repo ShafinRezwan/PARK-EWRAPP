@@ -130,7 +130,9 @@ export default function CreateEWRModal({ jobs, onClose }: Props) {
                     <div className="text-sm text-gray-500">
                       Division {job.division}
                       {job.recipient ? ` · ${job.recipient}` : ""}
-                      {job.year ? ` - ${job.year}` : ""}
+                      <span className="text-park-green italic">
+                        {job.year ? ` - ${job.year}` : ""}
+                      </span>
                     </div>
                   </button>
                 ))}

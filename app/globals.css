@@ -39,61 +39,157 @@
 
   html,
   body {
-    width: 8.5in;
-    height: 11in;
-    margin: 0;
-    padding: 0;
-    overflow: hidden;
-    background: white;
+    margin: 0 !important;
+    padding: 0 !important;
+
+    width: 8.5in !important;
+    height: auto !important;
+
+    background: white !important;
+    overflow: visible !important;
   }
 
+  /*
+    Hide the normal application.
+    visibility alone still keeps its layout,
+    so we also collapse it.
+  */
   body * {
     visibility: hidden;
-    font-family: Arial, Helvetica, sans-serif;
-    font-size: 12px;
+  }
+
+  /*
+  Hide every element that is neither:
+  - the print area
+  - inside the print area
+  - an ancestor containing the print area
+*/
+  body
+    *:not(#ewr-print-area):not(#ewr-print-area *):not(:has(#ewr-print-area)) {
+    display: none !important;
   }
 
   #ewr-print-area,
   #ewr-print-area * {
-    visibility: visible;
+    visibility: visible !important;
+  }
+  /*
+    IMPORTANT:
+    remove the screen preview wrapper from normal
+    page layout while printing.
+  */
+  .ewr-preview-scroll {
+    position: absolute !important;
+    top: 0 !important;
+    left: 0 !important;
+
+    width: 8.5in !important;
+    height: auto !important;
+    max-height: none !important;
+
+    margin: 0 !important;
+    padding: 0 !important;
+
+    overflow: visible !important;
+    background: white !important;
+    border: 0 !important;
   }
 
   #ewr-print-area {
-    position: fixed;
-    inset: 0;
+    position: static !important;
 
-    width: 8.5in;
-    height: 11in;
+    width: 8.5in !important;
+    height: auto !important;
 
-    margin: 0;
-    padding: 0;
+    margin: 0 !important;
+    padding: 0 !important;
 
-    overflow: hidden;
-    background: white;
+    overflow: visible !important;
+    background: white !important;
   }
 
+  /* --------------------------------
+     PAGE 1 — EWR
+  -------------------------------- */
+
   #ewr-preview {
-    width: 8.5in;
-    height: 11in;
+    box-sizing: border-box !important;
 
-    margin: 0;
-    padding: 0;
+    width: 8.5in !important;
+    height: 11in !important;
 
-    border: 0;
-    border-radius: 0;
-    box-shadow: none;
+    margin: 0 !important;
+    padding: 0 !important;
 
-    overflow: hidden;
+    border: 0 !important;
+    border-radius: 0 !important;
+    box-shadow: none !important;
 
-    break-before: avoid;
-    break-after: avoid;
-    break-inside: avoid;
+    overflow: hidden !important;
 
-    page-break-before: avoid;
-    page-break-after: avoid;
-    page-break-inside: avoid;
+    break-inside: avoid !important;
+    page-break-inside: avoid !important;
 
     print-color-adjust: exact;
     -webkit-print-color-adjust: exact;
+  }
+
+  /* --------------------------------
+     PAGE 2+ — INVOICE
+  -------------------------------- */
+
+  .invoice-print-page {
+    box-sizing: border-box !important;
+
+    width: 8.5in !important;
+    height: 11in !important;
+
+    margin: 0 !important;
+    padding: 0 !important;
+
+    display: flex !important;
+    align-items: center !important;
+    justify-content: center !important;
+
+    overflow: hidden !important;
+    background: white !important;
+
+    break-before: auto !important;
+    page-break-before: auto !important;
+
+    break-inside: avoid !important;
+    page-break-inside: avoid !important;
+  }
+
+  .invoice-print-page img {
+    display: block !important;
+
+    width: 100% !important;
+    height: 100% !important;
+
+    max-width: none !important;
+    max-height: none !important;
+
+    object-fit: contain !important;
+  }
+
+  /* --------------------------------
+     PRINT-ONLY FONT SIZES
+  -------------------------------- */
+
+  .ewr-print-document {
+    font-size: 12px !important;
+  }
+
+  .ewr-print-document .text-\[7px\] {
+    font-size: 11px !important;
+  }
+
+  .ewr-print-document .text-\[8px\] {
+    font-size: 12px !important;
+  }
+
+  .ewr-print-document .text-\[14px\] {
+    font-size: 22px !important;
   }
 }

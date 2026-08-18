@@ -13,8 +13,10 @@ export default function MaterialsTable({ materials }: Props) {
         <table className="w-full border-collapse text-left ">
           <thead className="sticky top-0 text-2xl text-park-gray bg-white ">
             <tr>
-              <th className="px-3 py-1 text-center underline ">Description</th>
-              <th className="px-3 py-1 text-center underline">Unit</th>
+              <th className="px-3 py-1 text-center underline w-1/2 ">
+                Description
+              </th>
+              <th className="px-3 py-1 text-center underline w-1/2">Unit</th>
             </tr>
           </thead>
           <tbody className="text-xl text-black">

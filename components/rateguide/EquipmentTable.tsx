@@ -13,15 +13,21 @@ export default function EquipmentTable({ equipmentRates }: Props) {
         <table className="w-full border-collapse text-left ">
           <thead className="sticky top-0 text-2xl text-park-gray bg-white ">
             <tr>
-              <th className="px-3 py-1 text-center underline ">
+              <th className="px-3 py-1 text-center underline  whitespace-nowrap">
                 Equipment Number
               </th>
-              <th className="px-3 py-1 text-center underline">
+              <th className="px-3 py-1 text-center underline whitespace-nowrap ">
+                Description
+              </th>
+              <th className="px-3 py-1 text-center underline whitespace-nowrap">
                 Make, Model, Year
               </th>
-              <th className="px-3 py-1 text-center underline ">Description</th>
-              <th className="px-3 py-1 text-center underline">Rate</th>
-              <th className="px-3 py-1 text-center underline">Horse Power</th>
+              <th className="px-3 py-1 text-center underline whitespace-nowrap">
+                Rate
+              </th>
+              <th className="px-3 py-1 text-center underline whitespace-nowrap">
+                Horse Power
+              </th>
             </tr>
           </thead>
           <tbody className="text-xl text-black">
@@ -32,11 +38,11 @@ export default function EquipmentTable({ equipmentRates }: Props) {
                 </td>
 
                 <td className="px-3 py-3 text-center">
-                  {equipment.makeModelYear}
+                  {equipment.description}
                 </td>
 
                 <td className="px-3 py-3 text-center">
-                  {equipment.description}
+                  {equipment.makeModelYear}
                 </td>
 
                 <td className="px-3 py-3 text-center">

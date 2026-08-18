@@ -2,14 +2,20 @@
 
 import Image from "next/image";
 import type { EWRFormData } from "../../types/ewr.types";
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
+import * as pdfjsLib from "pdfjs-dist";
 
 type EWRPreviewProps = {
   formData: EWRFormData;
   reportId: string | null;
   ewrNumber: string;
 };
+
+pdfjsLib.GlobalWorkerOptions.workerSrc = new URL(
+  "pdfjs-dist/build/pdf.worker.min.mjs",
+  import.meta.url,
+).toString();
 
 const moneyFormatter = new Intl.NumberFormat("en-US", {
   style: "currency",
@@ -70,6 +76,13 @@ export default function EWRPreview({
 
   const grandTotal =
     labourTotal + equipmentTotal + materialTotal + invoiceTotal;
+
+  const invoiceAttachments = formData.invoices
+    .map((invoice) => invoice.invoiceAttachment)
+    .filter(
+      (attachment): attachment is NonNullable<typeof attachment> =>
+        attachment !== null,
+    );
 
   const handlePrint = () => {
     window.print();
@@ -161,173 +174,217 @@ export default function EWRPreview({
 
   return (
     <div className="mx-auto w-full max-w-430px">
-      <div id="ewr-print-area">
-        <article
-          id="ewr-preview"
-          className="mx-auto aspect-8.5/11 w-full overflow-hidden border border-black bg-white text-black"
-        >
-          <div className="flex h-full flex-col px-[4.5%] py-[4%]">
-            {/* Main document border */}
-            <div className="flex min-h-0 flex-1 flex-col border border-black">
-              {/* Header */}
-              <header className="relative h-[20%] shrink-0 border-b border-black px-[1.2%] py-[1.5%]">
-                <div className="grid grid-cols-[28%_44%_28%] items-start">
-                  <div>
-                    <Image
-                      src="/images/ppl-logo.png"
-                      alt="Park Paving Ltd."
-                      width={160}
-                      height={95}
-                      className="h-auto w-[85%] object-contain"
-                      priority
-                    />
+      {/* Scrollable preview only */}
+      <div className="ewr-preview-scroll max-h-[70vh] overflow-y-auto rounded-lg bg-zinc-200 p-4">
+        <div id="ewr-print-area">
+          <article
+            id="ewr-preview"
+            className="ewr-print-document mx-auto aspect-8.5/11 w-full overflow-hidden border border-black bg-white text-black shadow-md"
+          >
+            <div className="flex h-full flex-col px-[4.5%] py-[4%]">
+              {/* Main document border */}
+              <div className="flex min-h-0 flex-1 flex-col border border-black">
+                {/* Header */}
+                <header className="relative h-[20%] shrink-0 border-b border-black px-[1.2%] py-[1.5%]">
+                  <div className="grid grid-cols-[28%_44%_28%] items-start">
+                    <div>
+                      <Image
+                        src="/images/ppl-logo.png"
+                        alt="Park Paving Ltd."
+                        width={160}
+                        height={95}
+                        className="h-auto w-[85%] object-contain"
+                        priority
+                      />
+                    </div>
+
+                    <div className="pt-[8%] text-center">
+                      <h1 className="text-[14px] font-bold uppercase tracking-tight">
+                        Extra Work Report # {formData.ewrNumber}
+                      </h1>
+                    </div>
+
+                    <div />
                   </div>
 
-                  <div className="pt-[8%] text-center">
-                    <h1 className="text-[14px] font-bold uppercase tracking-tight">
-                      Extra Work Report # {formData.ewrNumber}
-                    </h1>
+                  <div className="grid grid-cols-2 text-[8px]">
+                    <p>
+                      <span className="font-bold">To:</span>{" "}
+                      {formData.recipient}
+                    </p>
+
+                    <p className="text-right">
+                      <span className="font-bold">Date:</span>{" "}
+                      {formatDate(formData.date)}
+                    </p>
                   </div>
 
-                  <div />
-                </div>
+                  <div className="absolute bottom-[5%] left-[1.2%] text-[8px] leading-tight">
+                    <p>
+                      <span className="font-bold">Job #:</span>{" "}
+                      {formData.jobNumber}
+                    </p>
 
-                <div className="grid grid-cols-2 text-[8px]">
-                  <p>
-                    <span className="font-bold">To:</span> {formData.recipient}
-                  </p>
+                    <p>
+                      <span className="font-bold">Job Name:</span>{" "}
+                      {formData.jobName}
+                    </p>
+                  </div>
+                </header>
 
-                  <p className="text-right">
-                    <span className="font-bold">Date:</span>{" "}
-                    {formatDate(formData.date)}
-                  </p>
-                </div>
-
-                <div className="absolute bottom-[5%] left-[1.2%] text-[8px] leading-tight">
-                  <p>
-                    <span className="font-bold">Job #:</span>{" "}
-                    {formData.jobNumber}
-                  </p>
-
-                  <p>
-                    <span className="font-bold">Job Name:</span>{" "}
-                    {formData.jobName}
-                  </p>
-                </div>
-              </header>
-
-              {/* 
+                {/* 
                 Dynamic section area.
                 This is the portion that expands/shrinks,
                 while the whole PDF stays one page.
               */}
-              <div className="flex min-h-0 flex-1 flex-col overflow-hidden">
-                {/* Labour */}
-                <ReportSection
-                  columns="grid-cols-[62%_10%_10%_18%]"
-                  headers={["Classification", "Hrs.", "Rate", "Amount"]}
-                  rows={formData.labour.map((row) => {
-                    const amount = calculateAmount(row.hours, row.rate);
 
-                    return [
-                      row.classification,
-                      row.hours,
-                      row.rate ? moneyFormatter.format(Number(row.rate)) : "",
-                      amount !== 0 ? moneyFormatter.format(amount) : "",
-                    ];
-                  })}
-                  totalLabel="Total Labour"
-                  total={labourTotal}
-                />
+                <div className="flex min-h-0 flex-1 flex-col overflow-hidden">
+                  {/* Labour */}
 
-                {/* Equipment */}
-                <ReportSection
-                  columns="grid-cols-[45%_17%_9%_10%_19%]"
-                  headers={[
-                    "Equipment & Rented Trucks Name",
-                    "Unit No.",
-                    "Hrs.",
-                    "Rate",
-                    "Amount",
-                  ]}
-                  rows={formData.equipment.map((row) => {
-                    const amount = calculateAmount(row.hours, row.rate);
+                  <ReportSection
+                    columns="grid-cols-[62%_10%_10%_18%]"
+                    headers={["Classification", "Hrs.", "Rate", "Amount"]}
+                    rows={formData.labour.map((row) => {
+                      const amount = calculateAmount(row.hours, row.rate);
 
-                    return [
-                      row.name,
-                      row.unitNumber,
-                      row.hours,
-                      row.rate ? moneyFormatter.format(Number(row.rate)) : "",
-                      amount !== 0 ? moneyFormatter.format(amount) : "",
-                    ];
-                  })}
-                  totalLabel="Total Equipment"
-                  total={equipmentTotal}
-                />
+                      return [
+                        row.classification,
+                        row.hours,
+                        row.rate ? moneyFormatter.format(Number(row.rate)) : "",
+                        amount !== 0 ? moneyFormatter.format(amount) : "",
+                      ];
+                    })}
+                    totalLabel="Total Labour"
+                    total={labourTotal}
+                  />
 
-                {/* Materials */}
-                <ReportSection
-                  columns="grid-cols-[45%_17%_10%_10%_18%]"
-                  headers={["Materials", "Unit", "Qty.", "Price", "Amount"]}
-                  rows={formData.materials.map((row) => {
-                    const amount = calculateAmount(row.quantity, row.price);
+                  {/* Equipment */}
+                  <ReportSection
+                    columns="grid-cols-[45%_17%_9%_10%_19%]"
+                    headers={[
+                      "Equipment & Rented Trucks Name",
+                      "Unit No.",
+                      "Hrs.",
+                      "Rate",
+                      "Amount",
+                    ]}
+                    rows={formData.equipment.map((row) => {
+                      const amount = calculateAmount(row.hours, row.rate);
 
-                    return [
-                      row.name,
-                      row.unit,
-                      row.quantity,
-                      row.price ? moneyFormatter.format(Number(row.price)) : "",
-                      amount !== 0 ? moneyFormatter.format(amount) : "",
-                    ];
-                  })}
-                  totalLabel="Total Materials"
-                  total={materialTotal}
-                />
+                      return [
+                        row.name,
+                        row.unitNumber,
+                        row.hours,
+                        row.rate ? moneyFormatter.format(Number(row.rate)) : "",
+                        amount !== 0 ? moneyFormatter.format(amount) : "",
+                      ];
+                    })}
+                    totalLabel="Total Equipment"
+                    total={equipmentTotal}
+                  />
 
-                {/* Invoices */}
-                <ReportSection
-                  columns="grid-cols-[62%_10%_10%_18%]"
-                  headers={["Invoices", "Cost", "Mark Up %", "Amount"]}
-                  rows={formData.invoices.map((row) => {
-                    const amount = calculateMarkup(row.cost, row.markup);
+                  {/* Materials */}
+                  <ReportSection
+                    columns="grid-cols-[45%_17%_10%_10%_18%]"
+                    headers={["Materials", "Unit", "Qty.", "Price", "Amount"]}
+                    rows={formData.materials.map((row) => {
+                      const amount = calculateAmount(row.quantity, row.price);
 
-                    return [
-                      row.name,
-                      row.cost ? moneyFormatter.format(Number(row.cost)) : "",
-                      row.markup,
-                      amount !== 0 ? moneyFormatter.format(amount) : "",
-                    ];
-                  })}
-                  totalLabel="Total Invoice"
-                  total={invoiceTotal}
-                />
-              </div>
+                      return [
+                        row.name,
+                        row.unit,
+                        row.quantity,
+                        row.price
+                          ? moneyFormatter.format(Number(row.price))
+                          : "",
+                        amount !== 0 ? moneyFormatter.format(amount) : "",
+                      ];
+                    })}
+                    totalLabel="Total Materials"
+                    total={materialTotal}
+                  />
 
-              {/* Grand Total */}
-              <div className="flex h-[5%] shrink-0 flex-col justify-center border-t border-black px-[2%] text-[8px] font-bold uppercase">
-                <div className="flex justify-end">
-                  <span className="w-[36%] text-right">Total&nbsp;&nbsp;$</span>
+                  {/* Invoices */}
+                  <ReportSection
+                    columns="grid-cols-[62%_10%_10%_18%]"
+                    headers={["Invoices", "Cost", "Mark Up %", "Amount"]}
+                    rows={formData.invoices.map((row) => {
+                      const amount = calculateMarkup(row.cost, row.markup);
 
-                  <span className="w-[15%] text-right">
-                    {moneyFormatter.format(grandTotal)}
-                  </span>
+                      return [
+                        row.name,
+                        row.cost ? moneyFormatter.format(Number(row.cost)) : "",
+                        row.markup,
+                        amount !== 0 ? moneyFormatter.format(amount) : "",
+                      ];
+                    })}
+                    totalLabel="Total Invoice"
+                    total={invoiceTotal}
+                  />
+                </div>
+
+                {/* Grand Total */}
+                <div className="flex h-[5%] shrink-0 flex-col justify-center border-t border-black px-[2%] text-[8px] font-bold uppercase">
+                  <div className="flex justify-end">
+                    <span className="w-[36%] text-right">
+                      Total&nbsp;&nbsp;$
+                    </span>
+
+                    <span className="w-[15%] text-right">
+                      {moneyFormatter.format(grandTotal)}
+                    </span>
+                  </div>
+                </div>
+
+                {/* Description */}
+                <div className="h-[8%] shrink-0 overflow-hidden border-t border-black px-[1%] py-[0.7%] text-[7px]">
+                  <p className="font-bold underline">Description of work:</p>
+
+                  <p className="mt-[0.8%] whitespace-pre-wrap leading-snug">
+                    {formData.description}
+                  </p>
                 </div>
               </div>
-
-              {/* Description */}
-              <div className="h-[8%] shrink-0 overflow-hidden border-t border-black px-[1%] py-[0.7%] text-[7px]">
-                <p className="font-bold underline">Description of work:</p>
-
-                <p className="mt-[0.8%] whitespace-pre-wrap leading-snug">
-                  {formData.description}
-                </p>
-              </div>
             </div>
-          </div>
-        </article>
+          </article>
+
+          {/* Invoice Attachment Pages */}
+          {invoiceAttachments.map((attachment) => {
+            const isImage = attachment.fileType.startsWith("image/");
+
+            const isPdf = attachment.fileType === "application/pdf";
+
+            if (isImage) {
+              return (
+                <article
+                  key={attachment.id}
+                  className="invoice-print-page mx-auto mt-4 aspect-8.5/11 w-full bg-white"
+                >
+                  <img
+                    src={attachment.previewUrl}
+                    alt={attachment.fileName}
+                    className="h-full w-full object-contain "
+                  />
+                </article>
+              );
+            }
+
+            if (isPdf) {
+              return (
+                <PdfAttachmentPages
+                  key={attachment.id}
+                  file={attachment.file}
+                />
+              );
+            }
+
+            return null;
+          })}
+        </div>
       </div>
 
       {/* Controls do not print */}
+
       <div className="mt-5 h-9 overflow-hidden rounded-lg border border-black bg-white print:hidden">
         <div className="h-full w-[10%] rounded-l-md bg-green-600" />
       </div>
@@ -392,6 +449,81 @@ export default function EWRPreview({
         </div>
       )}
     </div>
+  );
+}
+
+function PdfAttachmentPages({ file }: { file: File }) {
+  const [pages, setPages] = useState<string[]>([]);
+
+  useEffect(() => {
+    let cancelled = false;
+
+    async function renderPdf() {
+      try {
+        const bytes = await file.arrayBuffer();
+
+        const loadingTask = pdfjsLib.getDocument({
+          data: bytes,
+        });
+
+        const pdf = await loadingTask.promise;
+
+        const renderedPages: string[] = [];
+
+        for (let pageNumber = 1; pageNumber <= pdf.numPages; pageNumber++) {
+          const page = await pdf.getPage(pageNumber);
+
+          const viewport = page.getViewport({
+            scale: 2,
+          });
+
+          const canvas = document.createElement("canvas");
+
+          const context = canvas.getContext("2d");
+
+          if (!context) {
+            continue;
+          }
+
+          canvas.width = viewport.width;
+          canvas.height = viewport.height;
+
+          await page.render({
+            canvas,
+            canvasContext: context,
+            viewport,
+          }).promise;
+
+          renderedPages.push(canvas.toDataURL("image/png"));
+        }
+
+        if (!cancelled) {
+          setPages(renderedPages);
+        }
+      } catch (error) {
+        console.error("PDF ATTACHMENT RENDER ERROR:", error);
+      }
+    }
+
+    renderPdf();
+
+    return () => {
+      cancelled = true;
+    };
+  }, [file]);
+
+  return (
+    <>
+      {pages.map((page, index) => (
+        <article key={index} className="invoice-print-page">
+          <img
+            src={page}
+            alt={`Invoice page ${index + 1}`}
+            className="h-full w-full object-contain"
+          />
+        </article>
+      ))}
+    </>
   );
 }
 
