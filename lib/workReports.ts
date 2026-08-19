@@ -55,17 +55,36 @@ export async function getWorkReportById(
   id: string,
 ): Promise<ExistingWorkReport | null> {
   const report = await prisma.extraWorkReport.findUnique({
-    where: {
-      id,
+  where: {
+    id,
+  },
+
+  select: {
+    id: true,
+    ewrNumber: true,
+    workDate: true,
+    recipient: true,
+    description: true,
+
+    job: {
+      select: {
+        id: true,
+        jobNumber: true,
+        jobName: true,
+      },
     },
-    include: {
-      job: true,
-      labourEntries: true,
-      equipmentEntries: true,
-      materialEntries: true,
-      invoices: true,
+
+    labourEntries: true,
+    equipmentEntries: true,
+    materialEntries: true,
+
+    invoices: {
+      include: {
+        attachment: true,
+      },
     },
-  });
+  },
+});
 
   if (!report) {
     return null;
@@ -76,50 +95,64 @@ export async function getWorkReportById(
     ewrNumber: report.ewrNumber,
 
     formData: {
-  jobId: report.job?.id ?? "",
+      jobId: report.job?.id ?? "",
 
-  recipient: report.recipient ?? "",
-  jobNumber: report.job?.jobNumber ?? "",
-  jobName: report.job?.jobName ?? "",
-  date: report.workDate.toISOString().split("T")[0],
-  description: report.description,
-  ewrNumber: report.ewrNumber ?? "",
+      recipient: report.recipient ?? "",
+      jobNumber: report.job?.jobNumber ?? "",
+      jobName: report.job?.jobName ?? "",
+      date: report.workDate.toISOString().split("T")[0],
+      description: report.description,
+      ewrNumber: report.ewrNumber ?? "",
 
-  labour: report.labourEntries.map((row) => ({
-    id: row.id,
-    classification: row.classification,
-    hours: String(row.hours),
-    rate: String(row.rate),
-  })),
+      labour: report.labourEntries.map((row) => ({
+        id: row.id,
+        classification: row.classification,
+        hours: String(row.hours),
+        rate: String(row.rate),
+      })),
 
-  equipment: report.equipmentEntries.map((row) => ({
-    id: row.id,
-    name: row.name,
-    unitNumber: row.unitNumber,
-    hours: String(row.hours),
-    rate: String(row.rate),
-  })),
+      equipment: report.equipmentEntries.map((row) => ({
+        id: row.id,
+        name: row.name,
+        unitNumber: row.unitNumber,
+        hours: String(row.hours),
+        rate: String(row.rate),
+      })),
 
-  materials: report.materialEntries.map((row) => ({
-    id: row.id,
-    name: row.name,
-    unit: row.unit,
-    quantity: String(row.quantity),
-    price: String(row.price),
-  })),
+      materials: report.materialEntries.map((row) => ({
+        id: row.id,
+        name: row.name,
+        unit: row.unit,
+        quantity: String(row.quantity),
+        price: String(row.price),
+      })),
 
-  invoices: report.invoices.map((row) => ({
-    id: row.id,
-    name: row.name,
-    cost: String(row.cost),
-    markup: String(row.markup),
+      invoices: report.invoices.map((row) => {
+        const attachment = row.attachment[0] ?? null;
 
-    amount: String(
-      Number(row.cost) +
-        Number(row.cost) * (Number(row.markup) / 100),
-    ),
+        return {
+          id: row.id,
+          name: row.name,
+          cost: String(row.cost),
+          markup: String(row.markup),
 
-    invoiceAttachment: null,
-  })),
-},
-}}
+          amount: String(
+            Number(row.cost) +
+              Number(row.cost) *
+                (Number(row.markup) / 100),
+          ),
+
+          invoiceAttachment: attachment
+            ? {
+                id: attachment.id,
+                file: null,
+                fileName: attachment.fileName,
+                fileType: attachment.fileType,
+                previewUrl: `/api/attachments/${attachment.id}`,
+              }
+            : null,
+        };
+      }),
+    },
+  };
+}

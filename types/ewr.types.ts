@@ -32,7 +32,7 @@ export type InvoiceFormRow = {
 
 export type InvoiceAttachment = {
   id: string;
-  file: File;
+  file: File | null;
   fileName: string;
   fileType: string;
   previewUrl: string;

@@ -1,4 +1,6 @@
 import { NextResponse } from "next/server";
+import { del } from "@vercel/blob";
+
 import { prisma } from "@/lib/prisma";
 
 import type {
@@ -8,14 +10,20 @@ import type {
   InvoiceFormRow,
 } from "@/types/ewr.types";
 
-type InvoiceSaveRow = Omit<InvoiceFormRow, "invoiceAttachment">;
+type InvoiceSaveRow = Omit<
+  InvoiceFormRow,
+  "invoiceAttachment"
+> & {
+  hasAttachment?: boolean;
+};
 
 type UpdateEWRBody = {
   jobNumber: string;
-  jobId:string;
+  jobId: string;
   recipient?: string;
   date: string;
   description?: string;
+
   labour?: LabourFormRow[];
   equipment?: EquipmentFormRow[];
   materials?: MaterialFormRow[];
@@ -35,10 +43,15 @@ export async function PUT(
   try {
     const { id } = await params;
 
-    const body = (await request.json()) as UpdateEWRBody;
+    // -----------------------------------------
+    // Get request body
+    // -----------------------------------------
+
+    const body =
+      (await request.json()) as UpdateEWRBody;
 
     const {
-        jobId,
+      jobId,
       jobNumber,
       recipient,
       date,
@@ -49,19 +62,46 @@ export async function PUT(
       invoices = [],
     } = body;
 
+    // -----------------------------------------
+    // Validation
+    // -----------------------------------------
+
     if (!jobNumber?.trim()) {
       return NextResponse.json(
-        { error: "Job number is required." },
-        { status: 400 },
+        {
+          error: "Job number is required.",
+        },
+        {
+          status: 400,
+        },
+      );
+    }
+
+    if (!jobId?.trim()) {
+      return NextResponse.json(
+        {
+          error: "Job is required.",
+        },
+        {
+          status: 400,
+        },
       );
     }
 
     if (!date) {
       return NextResponse.json(
-        { error: "Work date is required." },
-        { status: 400 },
+        {
+          error: "Work date is required.",
+        },
+        {
+          status: 400,
+        },
       );
     }
+
+    // -----------------------------------------
+    // Make sure EWR exists
+    // -----------------------------------------
 
     const existingReport =
       await prisma.extraWorkReport.findUnique({
@@ -72,16 +112,24 @@ export async function PUT(
 
     if (!existingReport) {
       return NextResponse.json(
-        { error: "EWR could not be found." },
-        { status: 404 },
+        {
+          error: "EWR could not be found.",
+        },
+        {
+          status: 404,
+        },
       );
     }
 
+    // -----------------------------------------
+    // Find selected Job
+    // -----------------------------------------
+
     const job = await prisma.job.findUnique({
-     where: {
-    id: jobId,
-  },
-});
+      where: {
+        id: jobId,
+      },
+    });
 
     if (!job) {
       return NextResponse.json(
@@ -94,6 +142,10 @@ export async function PUT(
       );
     }
 
+    // -----------------------------------------
+    // Labour
+    // -----------------------------------------
+
     const labourRows = labour
       .filter(
         (row) =>
@@ -102,16 +154,27 @@ export async function PUT(
           row.rate !== "",
       )
       .map((row) => {
-        const hours = Number(row.hours) || 0;
-        const rate = Number(row.rate) || 0;
+        const hours =
+          Number(row.hours) || 0;
+
+        const rate =
+          Number(row.rate) || 0;
 
         return {
-          classification: row.classification.trim(),
+          classification:
+            row.classification.trim(),
+
           hours,
           rate,
-          amount: hours * rate,
+
+          amount:
+            hours * rate,
         };
       });
+
+    // -----------------------------------------
+    // Equipment
+    // -----------------------------------------
 
     const equipmentRows = equipment
       .filter(
@@ -122,17 +185,29 @@ export async function PUT(
           row.rate !== "",
       )
       .map((row) => {
-        const hours = Number(row.hours) || 0;
-        const rate = Number(row.rate) || 0;
+        const hours =
+          Number(row.hours) || 0;
+
+        const rate =
+          Number(row.rate) || 0;
 
         return {
           name: row.name.trim(),
-          unitNumber: row.unitNumber.trim(),
+
+          unitNumber:
+            row.unitNumber.trim(),
+
           hours,
           rate,
-          amount: hours * rate,
+
+          amount:
+            hours * rate,
         };
       });
+
+    // -----------------------------------------
+    // Materials
+    // -----------------------------------------
 
     const materialRows = materials
       .filter(
@@ -143,105 +218,352 @@ export async function PUT(
           row.price !== "",
       )
       .map((row) => {
-        const quantity = Number(row.quantity) || 0;
-        const price = Number(row.price) || 0;
+        const quantity =
+          Number(row.quantity) || 0;
+
+        const price =
+          Number(row.price) || 0;
 
         return {
           name: row.name.trim(),
           unit: row.unit.trim(),
+
           quantity,
           price,
-          amount: quantity * price,
+
+          amount:
+            quantity * price,
         };
       });
 
+    // -----------------------------------------
+    // Invoices
+    // -----------------------------------------
+
     const invoiceRows = invoices
-      .filter(
-        (row) =>
-          row.name.trim() !== "" ||
-          row.cost !== "",
-      )
-      .map((row) => ({
-        name: row.name.trim(),
-        cost: Number(row.cost) || 0,
-        markup: Number(row.markup) || 0,
-      }));
+  .filter((row) => {
+    return (
+      row.name.trim() !== "" ||
+      row.cost !== "" ||
+      row.hasAttachment === true
+    );
+  })
+  .map((row) => {
+    return {
+      id: row.id,
+      name: row.name.trim(),
+      cost: Number(row.cost) || 0,
+      markup: Number(row.markup) || 0,
+
+      hasAttachment: row.hasAttachment === true,
+    };
+  });
+
+    // -----------------------------------------
+    // IDs of invoices still in the form
+    // -----------------------------------------
+
+    const incomingInvoiceIds =
+      invoiceRows.map(
+        (invoice) => invoice.id,
+      );
+
+    // Store Blob pathnames that need to be
+    // deleted AFTER the DB transaction succeeds.
+    const removedBlobPathnames: string[] = [];
+
+    // -----------------------------------------
+    // Update everything in one DB transaction
+    // -----------------------------------------
 
     const updatedReport =
-      await prisma.$transaction(async (tx) => {
-        // Delete currently saved child rows
-        await tx.eWRLabourRow.deleteMany({
-          where: {
-            reportId: id,
-          },
-        });
+      await prisma.$transaction(
+        async (tx) => {
+          // -------------------------------------
+          // Delete/rebuild labour
+          // -------------------------------------
 
-        await tx.eWREquipmentRow.deleteMany({
-          where: {
-            reportId: id,
-          },
-        });
+          await tx.eWRLabourRow.deleteMany({
+            where: {
+              reportId: id,
+            },
+          });
 
-        await tx.eWRMaterialRow.deleteMany({
-          where: {
-            reportId: id,
-          },
-        });
+          // -------------------------------------
+          // Delete/rebuild equipment
+          // -------------------------------------
 
-        await tx.eWRInvoiceRow.deleteMany({
-          where: {
-            reportId: id,
-          },
-        });
+          await tx.eWREquipmentRow.deleteMany({
+            where: {
+              reportId: id,
+            },
+          });
 
-        // Update the existing report
-        return tx.extraWorkReport.update({
-          where: {
-            id,
-          },
+          // -------------------------------------
+          // Delete/rebuild materials
+          // -------------------------------------
 
-          data: {
-            jobId: job.id,
+          await tx.eWRMaterialRow.deleteMany({
+            where: {
+              reportId: id,
+            },
+          });
 
-            workDate: new Date(
-              `${date}T00:00:00`,
-            ),
+          // -------------------------------------
+          // Find invoices removed from this EWR
+          // -------------------------------------
 
-            recipient:
-              recipient?.trim() || null,
+          const removedInvoices =
+            await tx.eWRInvoiceRow.findMany({
+              where: {
+                reportId: id,
 
-            description:
-              description?.trim() || "",
+                id: {
+                  notIn:
+                    incomingInvoiceIds,
+                },
+              },
 
-            labourEntries: {
-              create: labourRows,
+              include: {
+                attachment: true,
+              },
+            });
+
+          // -------------------------------------
+          // Remember their Blob files
+          // -------------------------------------
+
+          for (const invoice of removedInvoices) {
+  const attachment = invoice.attachment[0];
+
+  if (attachment?.pathname) {
+    removedBlobPathnames.push(
+      attachment.pathname,
+    );
+  }
+}
+
+          // -------------------------------------
+          // Delete removed invoice DB rows
+          // -------------------------------------
+
+          await tx.eWRInvoiceRow.deleteMany({
+            where: {
+              reportId: id,
+
+              id: {
+                notIn:
+                  incomingInvoiceIds,
+              },
+            },
+          });
+
+          // -------------------------------------
+// Find attachments manually removed
+// from invoices that still exist
+// -------------------------------------
+
+const invoicesWithRemovedAttachments =
+  invoiceRows.filter(
+    (invoice) => !invoice.hasAttachment,
+  );
+
+for (const invoice of invoicesWithRemovedAttachments) {
+  const existingAttachments =
+    await tx.attachment.findMany({
+      where: {
+        invoiceId: invoice.id,
+        reportId: id,
+      },
+    });
+
+  // Remember Blob files for deletion
+  // after the transaction succeeds.
+  for (const attachment of existingAttachments) {
+    if (attachment.pathname) {
+      removedBlobPathnames.push(
+        attachment.pathname,
+      );
+    }
+  }
+
+  // Delete attachment metadata from Prisma
+  await tx.attachment.deleteMany({
+    where: {
+      invoiceId: invoice.id,
+      reportId: id,
+    },
+  });
+}
+
+          // -------------------------------------
+          // Upsert invoices still in the form
+          // -------------------------------------
+
+          for (
+            const invoice of invoiceRows
+          ) {
+            await tx.eWRInvoiceRow.upsert({
+              where: {
+                id: invoice.id,
+              },
+
+              update: {
+                name:
+                  invoice.name,
+
+                cost:
+                  invoice.cost,
+
+                markup:
+                  invoice.markup,
+
+                reportId: id,
+              },
+
+              create: {
+                id:
+                  invoice.id,
+
+                name:
+                  invoice.name,
+
+                cost:
+                  invoice.cost,
+
+                markup:
+                  invoice.markup,
+
+                reportId: id,
+              },
+            });
+          }
+
+          // -------------------------------------
+          // Update main EWR
+          // -------------------------------------
+
+          return tx.extraWorkReport.update({
+            where: {
+              id,
             },
 
-            equipmentEntries: {
-              create: equipmentRows,
+            data: {
+              jobId:
+                job.id,
+
+              workDate:
+                new Date(
+                  `${date}T00:00:00`,
+                ),
+
+              recipient:
+                recipient?.trim() ||
+                null,
+
+              description:
+                description?.trim() ||
+                "",
+
+              labourEntries: {
+                create:
+                  labourRows,
+              },
+
+              equipmentEntries: {
+                create:
+                  equipmentRows,
+              },
+
+              materialEntries: {
+                create:
+                  materialRows,
+              },
             },
 
-            materialEntries: {
-              create: materialRows,
+            include: {
+              invoices: true,
             },
+          });
+        },
+      );
 
-            invoices: {
-              create: invoiceRows,
-            },
-          },
-        });
-      });
+    // -----------------------------------------
+    // Delete removed attachments from Blob
+    //
+    // Do this AFTER the DB transaction.
+    // -----------------------------------------
+
+    if (
+      removedBlobPathnames.length > 0
+    ) {
+      const blobToken =
+        process.env
+          .BLOB_READ_WRITE_TOKEN;
+
+      if (!blobToken) {
+        console.error(
+          "BLOB_READ_WRITE_TOKEN is not configured. Invoice DB records were removed, but Blob cleanup could not run.",
+        );
+      } else {
+        for (
+          const pathname of removedBlobPathnames
+        ) {
+          try {
+            await del(
+              pathname,
+              {
+                token:
+                  blobToken,
+              },
+            );
+
+            console.log(
+              "DELETED BLOB:",
+              pathname,
+            );
+          } catch (error) {
+            console.error(
+              `Unable to delete Blob ${pathname}:`,
+              error,
+            );
+          }
+        }
+      }
+    }
+
+    // -----------------------------------------
+    // Success
+    // -----------------------------------------
 
     return NextResponse.json({
-      message: `EWR ${updatedReport.ewrNumber} updated successfully.`,
+      message:
+        `${job.jobName} - EWR ${updatedReport.ewrNumber} updated successfully.`,
 
       report: {
-        id: updatedReport.id,
-        ewrNumber: updatedReport.ewrNumber,
+        id:
+          updatedReport.id,
+
+        ewrNumber:
+          updatedReport.ewrNumber,
+
+        invoices:
+          updatedReport.invoices.map(
+            (invoice) => ({
+              id:
+                invoice.id,
+
+              name:
+                invoice.name,
+            }),
+          ),
       },
     });
   } catch (error) {
-    console.error("UPDATE EWR ERROR:", error);
+    console.error(
+      "UPDATE EWR ERROR:",
+      error,
+    );
 
     return NextResponse.json(
       {

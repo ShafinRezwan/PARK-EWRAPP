@@ -249,16 +249,17 @@ if (duplicateReport) {
     // -----------------------------------------
 
     const invoiceRows = invoices
-      .filter((row) => {
-        return row.name.trim() !== "" || row.cost !== "";
-      })
-      .map((row) => {
-        return {
-          name: row.name.trim(),
-          cost: Number(row.cost) || 0,
-          markup: Number(row.markup) || 0,
-        };
-      });
+  .filter((row) => {
+    return row.name.trim() !== "" || row.cost !== "";
+  })
+  .map((row) => {
+    return {
+      id: row.id,
+      name: row.name.trim(),
+      cost: Number(row.cost) || 0,
+      markup: Number(row.markup) || 0,
+    };
+  });
 
     // -----------------------------------------
     // Debugging
@@ -274,60 +275,47 @@ if (duplicateReport) {
     // -----------------------------------------
 
     const report = await prisma.extraWorkReport.create({
-      data: {
-        ewrNumber: finalEwrNumber,
+  data: {
+    ewrNumber: finalEwrNumber,
 
-        workDate: new Date(`${date}T00:00:00`),
+    workDate: new Date(`${date}T00:00:00`),
 
-        recipient:
-          recipient && recipient.trim() !== ""
-            ? recipient.trim()
-            : null,
+    recipient:
+      recipient && recipient.trim() !== ""
+        ? recipient.trim()
+        : null,
 
-        description: description?.trim() ?? "",
+    description: description?.trim() ?? "",
 
-        status: "DRAFT",
+    status: "DRAFT",
 
-        // Connect EWR to Job
-        job: {
-          connect: {
-            id: job.id,
-          },
-        },
-
-        // -------------------------------------
-        // Create Labour Rows
-        // -------------------------------------
-
-        labourEntries: {
-          create: labourRows,
-        },
-
-        // -------------------------------------
-        // Create Equipment Rows
-        // -------------------------------------
-
-        equipmentEntries: {
-          create: equipmentRows,
-        },
-
-        // -------------------------------------
-        // Create Material Rows
-        // -------------------------------------
-
-        materialEntries: {
-          create: materialRows,
-        },
-
-        // -------------------------------------
-        // Create Invoice Rows
-        // -------------------------------------
-
-        invoices: {
-          create: invoiceRows,
-        },
+    job: {
+      connect: {
+        id: job.id,
       },
-    });
+    },
+
+    labourEntries: {
+      create: labourRows,
+    },
+
+    equipmentEntries: {
+      create: equipmentRows,
+    },
+
+    materialEntries: {
+      create: materialRows,
+    },
+
+    invoices: {
+      create: invoiceRows,
+    },
+  },
+
+  include: {
+    invoices: true,
+  },
+});
 
     console.log("EWR SAVED:", report.id);
 
@@ -336,22 +324,27 @@ if (duplicateReport) {
     // -----------------------------------------
 
     return NextResponse.json(
-      {
-        message: `EWR ${report.ewrNumber} saved successfully.`,
+  {
+    message: `EWR ${report.ewrNumber} saved successfully.`,
 
-        report: {
-          id: report.id,
-          ewrNumber: report.ewrNumber,
-          recipient: report.recipient,
-          workDate: report.workDate,
-          description: report.description,
-          status: report.status,
-        },
-      },
-      {
-        status: 201,
-      },
-    );
+    report: {
+      id: report.id,
+      ewrNumber: report.ewrNumber,
+      recipient: report.recipient,
+      workDate: report.workDate,
+      description: report.description,
+      status: report.status,
+
+      invoices: report.invoices.map((invoice) => ({
+        id: invoice.id,
+        name: invoice.name,
+      })),
+    },
+  },
+  {
+    status: 201,
+  },
+);
   } catch (error) {
     console.error("SAVE EWR ERROR:", error);
 

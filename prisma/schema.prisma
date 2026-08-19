@@ -117,10 +117,11 @@ model ExtraWorkReport {
   materialEntries  EWRMaterialRow[]
   invoices         EWRInvoiceRow[]
 
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
-  user      User?    @relation(fields: [userId], references: [id])
-  userId    String?
+  createdAt   DateTime     @default(now())
+  updatedAt   DateTime     @updatedAt
+  user        User?        @relation(fields: [userId], references: [id])
+  userId      String?
+  attachments Attachment[]
 
   @@unique([jobId, ewrNumber])
   @@index([jobId])
@@ -175,18 +176,25 @@ model Invoice {
 }
 
 model Attachment {
-  id       String @id @default(cuid())
+  id String @id @default(cuid())
+
+  reportId  String
+  invoiceId String?
+
   fileName String
   fileType String
-  fileSize Int?
   fileUrl  String
+  pathname String
 
-  reportID   String
-  uploadedAt DateTime      @default(now())
-  invoiceId  String        @unique
-  invoice    EWRInvoiceRow @relation(fields: [invoiceId], references: [id], onDelete: Cascade)
+  uploadedAt DateTime @default(now())
 
+  report ExtraWorkReport @relation(fields: [reportId], references: [id], onDelete: Cascade)
+
+  invoice  EWRInvoiceRow? @relation(fields: [invoiceId], references: [id], onDelete: Cascade)
   invoices Invoice[]
+
+  @@index([reportId])
+  @@index([invoiceId])
 }
 
 model EWRLabourRow {
@@ -244,7 +252,7 @@ model EWRInvoiceRow {
   markup       Float
   attachmentId String?
 
-  attachment Attachment?
+  attachment Attachment[]
   reportId   String
   report     ExtraWorkReport @relation(fields: [reportId], references: [id], onDelete: Cascade)
 

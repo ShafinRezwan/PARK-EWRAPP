@@ -173,6 +173,11 @@
     object-fit: contain !important;
   }
 
+  .ewr-print-document .ewr-data-row {
+    height: 28px !important;
+    min-height: 28px !important;
+  }
+
   /* --------------------------------
      PRINT-ONLY FONT SIZES
   -------------------------------- */

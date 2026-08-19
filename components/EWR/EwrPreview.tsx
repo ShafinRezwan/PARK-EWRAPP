@@ -4,18 +4,12 @@ import Image from "next/image";
 import type { EWRFormData } from "../../types/ewr.types";
 import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
-import * as pdfjsLib from "pdfjs-dist";
 
 type EWRPreviewProps = {
   formData: EWRFormData;
   reportId: string | null;
   ewrNumber: string;
 };
-
-pdfjsLib.GlobalWorkerOptions.workerSrc = new URL(
-  "pdfjs-dist/build/pdf.worker.min.mjs",
-  import.meta.url,
-).toString();
 
 const moneyFormatter = new Intl.NumberFormat("en-US", {
   style: "currency",
@@ -94,6 +88,10 @@ export default function EWRPreview({
       setSaveError("");
       setSaveMessage("");
 
+      // -----------------------------------------
+      // 1. Save EWR
+      // -----------------------------------------
+
       const payload = {
         jobId: formData.jobId,
         jobNumber: formData.jobNumber,
@@ -112,6 +110,8 @@ export default function EWRPreview({
           cost: invoice.cost,
           markup: invoice.markup,
           amount: invoice.amount,
+
+          hasAttachment: !!invoice.invoiceAttachment,
         })),
       };
 
@@ -128,13 +128,88 @@ export default function EWRPreview({
         },
       );
 
-      const result = await response.json();
+      const responseText = await response.text();
+
+      console.log("EWR SAVE STATUS:", response.status);
+      console.log("EWR SAVE RESPONSE:", responseText);
+
+      let result;
+
+      try {
+        result = JSON.parse(responseText);
+      } catch {
+        throw new Error(
+          `EWR API returned a non-JSON response: ${responseText}`,
+        );
+      }
 
       if (!response.ok) {
         throw new Error(result.error ?? "Unable to save EWR.");
       }
 
-      // Show success message
+      // -----------------------------------------
+      // 2. Get saved report ID
+      // -----------------------------------------
+
+      const savedReportId = result.report?.id;
+
+      if (!savedReportId) {
+        throw new Error("EWR was saved but no report ID was returned.");
+      }
+
+      // -----------------------------------------
+      // 3. Upload NEW invoice attachments
+      // -----------------------------------------
+
+      for (const invoice of formData.invoices) {
+        const attachment = invoice.invoiceAttachment;
+
+        // No new file selected
+        if (!attachment?.file) {
+          continue;
+        }
+
+        const attachmentFormData = new FormData();
+
+        attachmentFormData.append("file", attachment.file);
+
+        attachmentFormData.append("invoiceId", invoice.id);
+
+        const uploadResponse = await fetch(
+          `/api/ewr/${savedReportId}/attachments`,
+          {
+            method: "POST",
+            body: attachmentFormData,
+          },
+        );
+
+        const uploadText = await uploadResponse.text();
+
+        console.log("ATTACHMENT UPLOAD STATUS:", uploadResponse.status);
+
+        console.log("ATTACHMENT UPLOAD RESPONSE:", uploadText);
+
+        let uploadResult;
+
+        try {
+          uploadResult = JSON.parse(uploadText);
+        } catch {
+          throw new Error(
+            `Attachment API returned a non-JSON response: ${uploadText}`,
+          );
+        }
+
+        if (!uploadResponse.ok) {
+          throw new Error(
+            uploadResult.error ?? `Unable to upload ${attachment.fileName}.`,
+          );
+        }
+      }
+
+      // -----------------------------------------
+      // 4. Success message
+      // -----------------------------------------
+
       setSaveMessage(`EWR #${result.report.ewrNumber} saved as draft`);
 
       setShowSaveMessage(true);
@@ -147,7 +222,10 @@ export default function EWRPreview({
         setSaveMessage("");
       }, 3000);
 
-      // New report
+      // -----------------------------------------
+      // 5. Navigate / refresh
+      // -----------------------------------------
+
       if (!reportId && result.report?.id) {
         router.replace(`/create-ewr?id=${result.report.id}`);
       } else {
@@ -171,7 +249,6 @@ export default function EWRPreview({
   const handleCancel = () => {
     router.push("/work-reports");
   };
-
   return (
     <div className="mx-auto w-full max-w-430px">
       {/* Scrollable preview only */}
@@ -374,6 +451,7 @@ export default function EWRPreview({
                 <PdfAttachmentPages
                   key={attachment.id}
                   file={attachment.file}
+                  previewUrl={attachment.previewUrl}
                 />
               );
             }
@@ -452,15 +530,40 @@ export default function EWRPreview({
   );
 }
 
-function PdfAttachmentPages({ file }: { file: File }) {
+function PdfAttachmentPages({
+  file,
+  previewUrl,
+}: {
+  file: File | null;
+  previewUrl: string;
+}) {
   const [pages, setPages] = useState<string[]>([]);
 
   useEffect(() => {
+    if (!file) return;
+
     let cancelled = false;
 
     async function renderPdf() {
       try {
-        const bytes = await file.arrayBuffer();
+        // Only load PDF.js in the browser
+        const pdfjsLib = await import("pdfjs-dist");
+
+        pdfjsLib.GlobalWorkerOptions.workerSrc = `https://unpkg.com/pdfjs-dist@${pdfjsLib.version}/build/pdf.worker.min.mjs`;
+
+        let bytes: ArrayBuffer;
+
+        if (file) {
+          bytes = await file.arrayBuffer();
+        } else {
+          const response = await fetch(previewUrl);
+
+          if (!response.ok) {
+            throw new Error("Unable to load saved PDF attachment.");
+          }
+
+          bytes = await response.arrayBuffer();
+        }
 
         const loadingTask = pdfjsLib.getDocument({
           data: bytes,
@@ -582,23 +685,18 @@ function ReportSection({
         ))}
       </div>
 
-      {/* Dynamic row area */}
+      {/* Row area */}
       <div className="min-h-0 flex-1 overflow-hidden border-b border-black">
-        <div
-          className="grid h-full min-h-0"
-          style={{
-            gridTemplateRows: `repeat(${displayRows.length}, minmax(0, 1fr))`,
-          }}
-        >
+        <div className="flex h-full flex-col">
           {displayRows.map((row, rowIndex) => (
             <div
               key={rowIndex}
-              className={`grid min-h-0 text-[7px] ${columns}`}
+              className={`grid h-5 shrink-0 text-[7px] ${columns}`}
             >
               {headers.map((_, columnIndex) => (
                 <div
                   key={columnIndex}
-                  className={`flex min-h-0 min-w-0 items-center overflow-hidden px-2 ${
+                  className={`flex min-w-0 items-center overflow-hidden px-2 ${
                     columnIndex < headers.length - 1
                       ? "border-r border-black"
                       : ""
@@ -613,6 +711,20 @@ function ReportSection({
               ))}
             </div>
           ))}
+
+          {/* Empty space keeps column borders running down */}
+          <div className={`grid min-h-0 flex-1 ${columns}`}>
+            {headers.map((_, columnIndex) => (
+              <div
+                key={columnIndex}
+                className={
+                  columnIndex < headers.length - 1
+                    ? "border-r border-black"
+                    : ""
+                }
+              />
+            ))}
+          </div>
         </div>
       </div>
 
