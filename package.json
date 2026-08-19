@@ -10,8 +10,9 @@
     "postinstall": "prisma generate",
     "clear:reports": "tsx scripts/clearWorkReports.ts",
     "clear:jobs": "tsx scripts/clearJobs.ts",
+    "clear:user":"tsx scripts/clearUser.ts",
     "clear:all":"tsx scripts/clearDB.ts",
-    "create:users":"tsx scripts/createUser.ts"
+    "create:user":"tsx scripts/createUser.ts"
   },
   "dependencies": {
     "@base-ui/react": "^1.6.0",
