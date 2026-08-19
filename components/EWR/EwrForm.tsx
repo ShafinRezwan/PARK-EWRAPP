@@ -484,7 +484,7 @@ export default function EWRForm({
             id: createId(),
             name: "",
             cost: "",
-            markup: "10",
+            markup: "",
             amount: "",
             invoiceAttachment: null,
           },
