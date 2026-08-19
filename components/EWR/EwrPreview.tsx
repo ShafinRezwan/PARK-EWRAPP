@@ -210,13 +210,15 @@ export default function EWRPreview({
       // 4. Success message
       // -----------------------------------------
 
-      setSaveMessage(`EWR #${result.report.ewrNumber} saved as draft`);
+      setSaveMessage(
+        `JOB: ${formData.jobNumber} - EWR #${result.report.ewrNumber} saved as draft`,
+      );
 
       setShowSaveMessage(true);
 
       setTimeout(() => {
         setShowSaveMessage(false);
-      }, 2500);
+      }, 5000);
 
       setTimeout(() => {
         setSaveMessage("");

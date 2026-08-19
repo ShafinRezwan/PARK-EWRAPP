@@ -3,6 +3,12 @@
 import { prisma } from "../lib/prisma";
 
 async function main() {
+
+    if (process.env.NODE_ENV === "production") {
+  throw new Error(
+    "This cleanup script cannot run in production.",
+  );
+}
   if (process.env.ALLOW_DATABASE_WIPE !== "YES") {
     throw new Error(
       "Database wipe blocked. Set ALLOW_DATABASE_WIPE=YES to continue.",

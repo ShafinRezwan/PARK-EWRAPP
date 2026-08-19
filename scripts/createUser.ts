@@ -2,6 +2,12 @@ import bcrypt from "bcryptjs";
 import { prisma } from "../lib/prisma";
 
 async function main() {
+
+    if (process.env.NODE_ENV === "production") {
+  throw new Error(
+    "This cleanup script cannot run in production.",
+  );
+}
   const password = "Test!";
 
   const hashedPassword = await bcrypt.hash(password, 12);
