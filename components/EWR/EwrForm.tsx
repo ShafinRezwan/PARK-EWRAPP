@@ -513,6 +513,11 @@ export default function EWRForm({
       .slice(0, 8);
   };
   const jobMatches = getJobMatches(formData.jobNumber);
+  const parseLocalDate = (value: string) => {
+    const [year, month, day] = value.split("-").map(Number);
+
+    return new Date(year, month - 1, day);
+  };
 
   return (
     <form
@@ -626,22 +631,19 @@ export default function EWRForm({
                 type="button"
                 className="flex h-10 w-full items-center justify-between rounded-md border-2 border-black bg-white px-3 text-base"
               >
-                <span>
+                <span className="text-base">
                   {formData.date
-                    ? format(new Date(`${formData.date}`), "MM/dd/yy")
+                    ? format(parseLocalDate(formData.date), "MM/dd/yy")
                     : "Date"}
                 </span>
-
-                <CalendarIcon className="h-5 w-5 opacity-70" />
+                <CalendarIcon className="h-3 w-3 opacity-70" />
               </PopoverTrigger>
 
               <PopoverContent className="w-auto p-0 bg-white" align="start">
                 <Calendar
                   mode="single"
                   selected={
-                    formData.date
-                      ? new Date(`${formData.date}T00:00:00`)
-                      : undefined
+                    formData.date ? parseLocalDate(formData.date) : undefined
                   }
                   onSelect={(selectedDate) => {
                     updateMainField(
