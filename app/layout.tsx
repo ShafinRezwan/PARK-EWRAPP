@@ -17,7 +17,7 @@ const geistMono = Geist_Mono({
 
 export const metadata: Metadata = {
   title: "ParK Paving EWR App",
-  description: "Extra Work Report App Prototype 01 July 2026",
+  description: "Extra Work Report App Prototype",
 };
 
 export default function RootLayout({
