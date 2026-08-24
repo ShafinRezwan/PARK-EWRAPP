@@ -3,6 +3,7 @@ import { prisma } from "./prisma";
 
 export type Job = {
   id: string;
+  address: string | null;
   jobNumber: string;
   jobName: string;
   division: string;
@@ -23,6 +24,7 @@ export async function getJobs(){
     id: job.id,
     jobNumber: job.jobNumber,
     jobName: job.jobName,
+    address: job.address,
     division: job.division,
     year: job.year,
     recipient: job.recipient,

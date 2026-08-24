@@ -17,6 +17,7 @@ type Props = {
     jobNumber?: string;
     jobName?: string;
     date?: string;
+    address?: string;
   }>;
 };
 export default async function Page({ searchParams }: Props) {
@@ -50,6 +51,7 @@ export default async function Page({ searchParams }: Props) {
               jobNumber: params.jobNumber ?? "",
               jobName: params.jobName ?? "",
               date: params.date ?? "",
+              address: params.address ?? "",
             }
       }
     />

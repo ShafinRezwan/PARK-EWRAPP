@@ -26,6 +26,7 @@ export default function CreateEWRModal({ jobs, onClose }: Props) {
   const [to, setTo] = useState("");
   const [jobNumber, setJobNumber] = useState("");
   const [jobName, setJobName] = useState("");
+  const [address, setAddress] = useState("");
   const [date, setDate] = useState<Date | undefined>();
   const [jobId, setJobId] = useState("");
   const [jobDropdownOpen, setJobDropdownOpen] = useState(false);
@@ -51,6 +52,7 @@ export default function CreateEWRModal({ jobs, onClose }: Props) {
       to,
       jobNumber,
       jobName,
+      address,
       date: date ? format(date, "yyyy-MM-dd") : "",
     });
 
@@ -77,6 +79,7 @@ export default function CreateEWRModal({ jobs, onClose }: Props) {
                 setJobNumber(event.target.value);
                 setJobId("");
                 setJobName("");
+                setAddress("");
                 setTo("");
 
                 setJobDropdownOpen(true);
@@ -117,6 +120,7 @@ export default function CreateEWRModal({ jobs, onClose }: Props) {
                       setJobId(job.id);
                       setJobNumber(job.jobNumber);
                       setJobName(job.jobName);
+                      setAddress(job.address ?? "");
                       setTo(job.recipient ?? "");
 
                       setJobDropdownOpen(false);

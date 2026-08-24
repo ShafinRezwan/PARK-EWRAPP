@@ -21,6 +21,7 @@ type UpdateEWRBody = {
   jobNumber: string;
   jobId: string;
   recipient?: string;
+  address ?: string;
   date: string;
   description?: string;
 
@@ -54,6 +55,7 @@ export async function PUT(
       jobId,
       jobNumber,
       recipient,
+      address,
       date,
       description,
       labour = [],
@@ -460,6 +462,9 @@ for (const invoice of invoicesWithRemovedAttachments) {
               recipient:
                 recipient?.trim() ||
                 null,
+              
+              address:
+                address?.trim() || null,
 
               description:
                 description?.trim() ||

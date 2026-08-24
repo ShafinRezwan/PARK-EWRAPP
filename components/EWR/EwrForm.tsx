@@ -37,7 +37,6 @@ type EWRFormProps = {
   labourRates: LabourRate[];
   equipmentRates: EquipmentRate[];
   materialRates: MaterialRate[];
-
   reportId: string | null;
 
   ewrNumberError: string;
@@ -143,10 +142,11 @@ export default function EWRForm({
       EWRFormData,
       | "recipient"
       | "jobNumber"
+      | "ewrNumber"
       | "date"
+      | "address"
       | "jobName"
       | "description"
-      | "ewrNumber"
     >,
     value: string,
   ) => {
@@ -552,6 +552,7 @@ export default function EWRForm({
                     jobId: "",
                     jobNumber: value,
                     jobName: "",
+                    address: "",
                     recipient: "",
                   }));
 
@@ -570,12 +571,15 @@ export default function EWRForm({
                     key={job.id}
                     type="button"
                     onClick={() => {
+                      console.log("JOB:", job);
+                      console.log("ADDRESS:", job.address);
                       setFormData((current) => ({
                         ...current,
 
                         jobId: job.id,
                         jobNumber: job.jobNumber,
                         jobName: job.jobName,
+                        address: job.address ?? "",
                         recipient: job.recipient ?? "",
                       }));
 
@@ -661,6 +665,15 @@ export default function EWRForm({
           <input
             value={formData.jobName}
             onChange={(event) => updateMainField("jobName", event.target.value)}
+            className={inputClassName}
+          />
+        </Field>
+
+        <Field label="Address:">
+          <input
+            value={formData.address}
+            placeholder="Street Address, City, Province Postal Code"
+            onChange={(event) => updateMainField("address", event.target.value)}
             className={inputClassName}
           />
         </Field>

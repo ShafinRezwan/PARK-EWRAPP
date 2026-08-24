@@ -8,6 +8,7 @@ export async function POST(request: Request) {
     const {
       jobNumber,
       jobName,
+      address,
       division,
       year,
       recipient,
@@ -76,6 +77,7 @@ export async function POST(request: Request) {
       data: {
         jobNumber: cleanJobNumber,
         jobName: String(jobName).trim(),
+        address: address.trim(),
         division: String(division).trim(),
         year: parsedYear,
 

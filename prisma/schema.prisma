@@ -83,6 +83,7 @@ model ToDoTask {
 model Job {
   id        String  @id @default(cuid())
   jobNumber String
+  address   String?
   jobName   String
   division  String
   year      Int
@@ -108,6 +109,7 @@ model ExtraWorkReport {
   workDate    DateTime
   jobId       String?
   job         Job?         @relation(fields: [jobId], references: [id], onDelete: Restrict)
+  address     String?
   recipient   String?
   description String
   status      ReportStatus @default(DRAFT)

@@ -96,6 +96,7 @@ export default function EWRPreview({
         jobId: formData.jobId,
         jobNumber: formData.jobNumber,
         recipient: formData.recipient,
+        address: formData.address,
         date: formData.date,
         description: formData.description,
         ewrNumber: formData.ewrNumber,
@@ -251,6 +252,17 @@ export default function EWRPreview({
   const handleCancel = () => {
     router.push("/work-reports");
   };
+
+  const splitAddressAtFirstComma = (address: string) => {
+    const commaIndex = address.indexOf(",");
+
+    if (commaIndex === -1) {
+      return [address];
+    }
+
+    return [address.slice(0, commaIndex), address.slice(commaIndex + 1)];
+  };
+
   return (
     <div className="mx-auto w-full max-w-430px">
       {/* Scrollable preview only */}
@@ -264,7 +276,7 @@ export default function EWRPreview({
               {/* Main document border */}
               <div className="flex min-h-0 flex-1 flex-col border border-black">
                 {/* Header */}
-                <header className="relative h-[20%] shrink-0 border-b border-black px-[1.2%] py-[1.5%]">
+                <header className="relative h-[23%] shrink-0 border-b border-black px-[1.2%] py-[1.5%]">
                   <div className="grid grid-cols-[28%_44%_28%] items-start">
                     <div>
                       <Image
@@ -286,28 +298,42 @@ export default function EWRPreview({
                     <div />
                   </div>
 
-                  <div className="grid grid-cols-2 text-[8px]">
-                    <p>
-                      <span className="font-bold">To:</span>{" "}
-                      {formData.recipient}
-                    </p>
+                  <div className="grid grid-cols-2 text-[8px] leading-tight">
+                    {/* Left side */}
+                    <div>
+                      <div>
+                        <span className="font-bold">To:</span>{" "}
+                        {formData.recipient}
+                      </div>
 
-                    <p className="text-right">
+                      {formData.address && (
+                        <div className="mt-1 ml-5 mb-2">
+                          {splitAddressAtFirstComma(formData.address).map(
+                            (line, index) => (
+                              <div key={index}>{line.trim()}</div>
+                            ),
+                          )}
+                        </div>
+                      )}
+
+                      <div className="mt-1">
+                        <div className="mb-1">
+                          <span className="font-bold ">Job #:</span>{" "}
+                          {formData.jobNumber}
+                        </div>
+
+                        <div>
+                          <span className="font-bold">Job Name:</span>{" "}
+                          {formData.jobName}
+                        </div>
+                      </div>
+                    </div>
+
+                    {/* Right side */}
+                    <div className="text-right">
                       <span className="font-bold">Date:</span>{" "}
                       {formatDate(formData.date)}
-                    </p>
-                  </div>
-
-                  <div className="absolute bottom-[5%] left-[1.2%] text-[8px] leading-tight">
-                    <p>
-                      <span className="font-bold">Job #:</span>{" "}
-                      {formData.jobNumber}
-                    </p>
-
-                    <p>
-                      <span className="font-bold">Job Name:</span>{" "}
-                      {formData.jobName}
-                    </p>
+                    </div>
                   </div>
                 </header>
 
@@ -481,7 +507,7 @@ export default function EWRPreview({
         <button
           type="button"
           onClick={handleSave}
-          disabled={isSaving || !!ewrNumber}
+          disabled={isSaving || !formData.jobNumber || !formData.ewrNumber}
           className="rounded-md bg-sky-600 px-3 py-2.5 text-lg font-semibold text-white transition hover:bg-sky-700 disabled:cursor-not-allowed disabled:opacity-50"
         >
           {isSaving ? "SAVING..." : "SAVE"}

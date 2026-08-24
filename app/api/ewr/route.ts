@@ -20,7 +20,8 @@ type CreateEWRBody = {
   jobNumber: string;
   recipient?: string;
   date: string;
-  description?: string;
+  description?: string; 
+  address?: string;
   ewrNumber?: string;
   labour?: LabourFormRow[];
   equipment?: EquipmentFormRow[];
@@ -41,6 +42,7 @@ export async function POST(request: Request) {
       jobId,
        ewrNumber,
       recipient,
+      address,
       date,
       description,
       labour = [],
@@ -285,6 +287,8 @@ if (duplicateReport) {
         ? recipient.trim()
         : null,
 
+    address: address?.trim() || null,
+
     description: description?.trim() ?? "",
 
     status: "DRAFT",
@@ -294,7 +298,7 @@ if (duplicateReport) {
         id: job.id,
       },
     },
-
+   
     labourEntries: {
       create: labourRows,
     },
@@ -333,6 +337,7 @@ if (duplicateReport) {
       recipient: report.recipient,
       workDate: report.workDate,
       description: report.description,
+      address: report.address,
       status: report.status,
 
       invoices: report.invoices.map((invoice) => ({

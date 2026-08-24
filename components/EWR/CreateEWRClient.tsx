@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useState } from "react";
 
 import Sidebar from "@/components/sidebar";
 import EWRForm from "@/components/EWR/EwrForm";
@@ -20,6 +20,7 @@ const initialFormData: EWRFormData = {
   jobName: "",
   description: "",
   ewrNumber: "",
+  address: "",
 
   labour: [
     {
@@ -118,6 +119,7 @@ type Props = {
     jobNumber: string;
     jobName: string;
     date: string;
+    address: string;
   } | null;
 };
 
@@ -151,6 +153,7 @@ export default function CreateEWRClient({
         jobNumber: initialParams.jobNumber,
         jobName: initialParams.jobName,
         date: initialParams.date,
+        address: initialParams.address,
         ewrNumber: ewrNumber ?? "",
       };
     }

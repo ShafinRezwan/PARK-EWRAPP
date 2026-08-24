@@ -12,6 +12,7 @@ export type WorkReports = {
   jobName: string;
   ewrNumber: string;
   dateOfWork: string;
+  address: string;
    status:
     | "DRAFT"
     | "PENDING_APPROVAL"
@@ -36,6 +37,7 @@ export async function getWorkReports(): Promise<WorkReports[]> {
     id: report.id,
     jobNumber: report.job?.jobNumber ?? "",
     jobName: report.job?.jobName ?? "",
+    address: report.address ?? "",
     ewrNumber: report.ewrNumber,
     dateOfWork: report.workDate.toISOString(),
     status: report.status,
@@ -64,6 +66,7 @@ export async function getWorkReportById(
     ewrNumber: true,
     workDate: true,
     recipient: true,
+    address: true,
     description: true,
 
     job: {
@@ -100,6 +103,7 @@ export async function getWorkReportById(
       recipient: report.recipient ?? "",
       jobNumber: report.job?.jobNumber ?? "",
       jobName: report.job?.jobName ?? "",
+      address: report.address ?? "",
       date: report.workDate.toISOString().split("T")[0],
       description: report.description,
       ewrNumber: report.ewrNumber ?? "",
