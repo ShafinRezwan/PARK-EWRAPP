@@ -222,7 +222,8 @@ export default function WorkReportTable({
                 {filteredJobs.map((job) => (
                   <tr
                     key={job.id}
-                    className="border-b-2 border-park-gray transition hover:bg-gray-50"
+                    className="cursor-pointer border-b-2 border-park-gray transition hover:bg-gray-100"
+                    onClick={() => setEditingJob(job)}
                   >
                     <td className="px-3 py-3 text-center">{job.jobNumber}</td>
 
@@ -232,17 +233,7 @@ export default function WorkReportTable({
 
                     <td className="px-3 py-3 text-center">{job.year}</td>
 
-                    <td className="px-3 py-3">
-                      <div className="flex items-center justify-center gap-3">
-                        <button
-                          type="button"
-                          onClick={() => setEditingJob(job)}
-                          className="cursor-pointer rounded-md bg-sky-600 px-4 py-1.5 text-base font-semibold text-white transition hover:bg-sky-700"
-                        >
-                          Edit
-                        </button>
-                      </div>
-                    </td>
+                    <td className="px-3 py-3"></td>
                   </tr>
                 ))}
               </tbody>
