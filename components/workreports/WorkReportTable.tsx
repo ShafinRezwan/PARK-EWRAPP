@@ -6,6 +6,9 @@ import { useRouter } from "next/navigation";
 import { WorkReports } from "@/lib/workReports";
 import { format } from "date-fns";
 
+import EditJobModal from "@/components/EditJobModal";
+import Modal from "../Modal";
+
 type Props = {
   jobs: Job[];
   workReports: WorkReports[];
@@ -21,6 +24,8 @@ export default function WorkReportTable({
   const [selectedDivision, setSelectedDivision] = useState("All");
   const [selectYear, setSelectYear] = useState("All");
   const router = useRouter();
+
+  const [editingJob, setEditingJob] = useState<Job | null>(null);
 
   const filteredReports = workReports.filter((report) => {
     const matchesDivision =
@@ -199,35 +204,57 @@ export default function WorkReportTable({
             </tbody>
           </table>
         ) : (
-          <table className="w-full border-collapse text-left">
-            <thead className="sticky top-0 bg-white text-2xl text-park-gray">
-              <tr>
-                <th className="px-3 py-1 text-center underline">Job #</th>
+          <>
+            <table className="w-full border-collapse text-left">
+              <thead className="sticky top-0 bg-white text-2xl text-park-gray">
+                <tr>
+                  <th className="px-3 py-1 text-center underline">Job #</th>
 
-                <th className="px-3 py-1 text-center underline">Job Name</th>
+                  <th className="px-3 py-1 text-center underline">Job Name</th>
 
-                <th className="px-3 py-1 text-center underline">Division</th>
+                  <th className="px-3 py-1 text-center underline">Division</th>
 
-                <th className="px-3 py-1 text-center underline">Year</th>
-              </tr>
-            </thead>
-
-            <tbody className="text-xl text-black">
-              {filteredJobs.map((job) => (
-                <tr key={job.id} className="border-b-2 border-park-gray">
-                  <td className="px-3 py-3 text-center">{job.jobNumber}</td>
-
-                  <td className="px-3 py-3 text-center">{job.jobName}</td>
-
-                  <td className="px-3 py-3 text-center">{job.division}</td>
-
-                  <td className="px-3 py-3 text-center">{job.year}</td>
+                  <th className="px-3 py-1 text-center underline">Year</th>
                 </tr>
-              ))}
-            </tbody>
-          </table>
+              </thead>
+
+              <tbody className="text-xl text-black">
+                {filteredJobs.map((job) => (
+                  <tr
+                    key={job.id}
+                    className="border-b-2 border-park-gray transition hover:bg-gray-50"
+                  >
+                    <td className="px-3 py-3 text-center">{job.jobNumber}</td>
+
+                    <td className="px-3 py-3 text-center">{job.jobName}</td>
+
+                    <td className="px-3 py-3 text-center">{job.division}</td>
+
+                    <td className="px-3 py-3 text-center">{job.year}</td>
+
+                    <td className="px-3 py-3">
+                      <div className="flex items-center justify-center gap-3">
+                        <button
+                          type="button"
+                          onClick={() => setEditingJob(job)}
+                          className="cursor-pointer rounded-md bg-sky-600 px-4 py-1.5 text-base font-semibold text-white transition hover:bg-sky-700"
+                        >
+                          Edit
+                        </button>
+                      </div>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </>
         )}
       </div>
+      <Modal isOpen={editingJob !== null} onClose={() => setEditingJob(null)}>
+        {editingJob && (
+          <EditJobModal job={editingJob} onClose={() => setEditingJob(null)} />
+        )}
+      </Modal>
     </section>
   );
 }

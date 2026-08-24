@@ -28,9 +28,11 @@ export default function CreateJobModal({ onClose }: Props) {
   const [error, setError] = useState("");
   const [jobNumberError, setJobNumberError] = useState("");
   const [addressError, setAddressError] = useState("");
+  const [successMessage, setSuccessMessage] = useState("");
+  const [showSuccessMessage, setShowSuccessMessage] = useState(false);
 
   function validateJobNumber(value: string) {
-    const jobNumberPattern = /^\d{2}-\d{3}$/;
+    const jobNumberPattern = /^\d{2}-\d{4}$/;
 
     if (!jobNumberPattern.test(value.trim())) {
       return "Job # must follow the format 26-012.";
@@ -103,8 +105,19 @@ export default function CreateJobModal({ onClose }: Props) {
         throw new Error(result.error ?? "Unable to create job.");
       }
 
+      setSuccessMessage(`Job ${jobNumber} - ${jobName} created successfully.`);
+
+      setShowSuccessMessage(true);
+
       router.refresh();
-      onClose();
+
+      setTimeout(() => {
+        setShowSuccessMessage(false);
+      }, 2500);
+
+      setTimeout(() => {
+        onClose();
+      }, 3000);
     } catch (error) {
       setError(
         error instanceof Error ? error.message : "Unable to create job.",
@@ -229,6 +242,29 @@ export default function CreateJobModal({ onClose }: Props) {
             </button>
           </div>
         </form>
+        {successMessage && (
+          <div
+            className={`
+      fixed left-1/2 top-5 z-[9999]
+      -translate-x-1/2
+      rounded-lg
+      bg-park-green
+      px-6 py-3
+      text-lg font-semibold text-white
+      shadow-xl
+      transition-all
+      duration-500
+      ease-in-out
+      ${
+        showSuccessMessage
+          ? "translate-y-0 opacity-100"
+          : "-translate-y-5 opacity-0"
+      }
+    `}
+          >
+            ✓ {successMessage}
+          </div>
+        )}
       </PageTransition>
     </>
   );
