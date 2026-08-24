@@ -11,6 +11,7 @@ export const workReports: WorkReports[] = [
     status: "DRAFT",
     divisionCode: "01",
     year: "2026",
+    address:"",
   },
   {
     id: "2",
@@ -21,6 +22,7 @@ export const workReports: WorkReports[] = [
     status: "SENT",
     divisionCode: "03",
     year: "2026",
+     address:"",
   },
   {
     id: "3",
@@ -31,6 +33,7 @@ export const workReports: WorkReports[] = [
     status: "DRAFT",
     divisionCode: "01",
     year: "2026",
+     address:"",
   },
   {
     id: "4",
@@ -41,6 +44,7 @@ export const workReports: WorkReports[] = [
     status: "DRAFT",
     divisionCode: "01",
     year: "2026",
+     address:"",
   },
   {
     id: "5",
@@ -51,6 +55,7 @@ export const workReports: WorkReports[] = [
     status: "DRAFT",
     divisionCode: "01",
     year: "2026",
+     address:"",
   },
   {
     id: "6",
@@ -61,6 +66,7 @@ export const workReports: WorkReports[] = [
     status: "DRAFT",
     divisionCode: "01",
     year: "2026",
+     address:"",
   },
   {
     id: "7",
@@ -71,6 +77,7 @@ export const workReports: WorkReports[] = [
     status: "DRAFT",
     divisionCode: "01",
     year: "2025",
+     address:"",
   },
 ];
 
@@ -83,6 +90,7 @@ export const jobs: Job[] = [
     division: "01",
     recipient:"City of Edmonton",
     year: 2026,
+     address:"",
   },
   {
     id: "2",
@@ -91,6 +99,7 @@ export const jobs: Job[] = [
     division: "03",
      recipient:"City of Edmonton",
     year: 2026,
+     address:"",
   },
   {
     id: "3",
@@ -99,5 +108,6 @@ export const jobs: Job[] = [
     division: "01",
      recipient:"City of Edmonton",
     year: 2026,
+     address:"",
   },
 ];
