@@ -290,8 +290,9 @@ export default function EWRPreview({
                     </div>
 
                     <div className="pt-[8%] text-center">
-                      <h1 className="text-[14px] font-bold uppercase tracking-tight">
-                        Extra Work Report # {formData.ewrNumber}
+                      <h1 className=" whitespace-nowrap text-[14px] font-bold uppercase tracking-tight">
+                        Extra Work Report # {formData.jobNumber}{" "}
+                        {formData.ewrNumber}
                       </h1>
                     </div>
 
