@@ -165,9 +165,9 @@ export default function CreateEWRClient({
   });
 
   return (
-    <div className="min-w-0 flex-1">
-      <div className="grid min-h-screen grid-cols-1 xl:grid-cols-[minmax(0,1fr)_390px]">
-        <section className="min-w-0 border-r border-zinc-200 px-5 py-8 md:px-8">
+    <div className="flex min-h-screen bg-white">
+      <div className="grid min-w-0 flex-1 grid-cols-1 xl:grid-cols-[minmax(0,1fr)_440px] 2xl:grid-cols-[minmax(0,1fr)_500px]">
+        <main className="min-w-0 px-6 py-8 md:px-8">
           <EWRForm
             formData={formData}
             setFormData={setFormData}
@@ -179,10 +179,10 @@ export default function CreateEWRClient({
             ewrNumberError={ewrNumberError}
             setEwrNumberError={setEwrNumberError}
           />
-        </section>
+        </main>
 
-        <aside className="bg-zinc-50 px-5 py-8 md:px-7">
-          <div className="xl:sticky xl:top-6">
+        <aside className="border-l border-zinc-200 bg-zinc-50 px-4 py-8">
+          <div className="mx-auto w-full max-w-[470px] xl:sticky xl:top-6">
             <EWRPreview
               formData={formData}
               reportId={reportId}
