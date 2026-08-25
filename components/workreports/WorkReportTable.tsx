@@ -63,6 +63,14 @@ export default function WorkReportTable({
     return matchesDivision && matchesYear && matchesSearch;
   });
 
+  const parseLocalDate = (value: string) => {
+    const dateOnly = value.split("T")[0];
+
+    const [year, month, day] = dateOnly.split("-").map(Number);
+
+    return new Date(year, month - 1, day);
+  };
+
   const currentYear = new Date().getFullYear();
 
   const years = [
@@ -196,7 +204,7 @@ export default function WorkReportTable({
                   <td className="px-3 py-3 text-center">{report.ewrNumber}</td>
 
                   <td className="px-3 py-3 text-center">
-                    {format(new Date(report.dateOfWork), "MMM dd, yyyy")}
+                    {format(parseLocalDate(report.dateOfWork), "MMM dd, yyyy")}
                   </td>
                   <td className="px-3 py-3 text-center">{report.status}</td>
                 </tr>
