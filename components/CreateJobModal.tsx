@@ -32,7 +32,7 @@ export default function CreateJobModal({ onClose }: Props) {
   const [showSuccessMessage, setShowSuccessMessage] = useState(false);
 
   function validateJobNumber(value: string) {
-    const jobNumberPattern = /^\d{2}-\d{4}$/;
+    const jobNumberPattern = /^\d{2}-\d{3,4}$/;
 
     if (!jobNumberPattern.test(value.trim())) {
       return "Job # must follow the format 26-012.";
