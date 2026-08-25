@@ -83,26 +83,23 @@ export default function WorkReportTable({
   return (
     <section className="flex h-full flex-col border-black rounded-md border-[3px] px-4 py-2">
       <div className="flex justify-between">
-        <h1 className="text-park-green text-3xl mb-4">
-          {tableView === "reports" ? "All  Work Reports" : "All Jobs"}
-        </h1>
+        <button
+          type="button"
+          onClick={() =>
+            setTableView((current) =>
+              current === "reports" ? "jobs" : "reports",
+            )
+          }
+          className="cursor-pointer text-park-green  transition-all duration-400 ease-in-out hover:text-green-700 hover:scale-103"
+        >
+          <h1 className="text-3xl mb-4">
+            {tableView === "reports" ? "All  Work Reports" : "All Jobs"}
+          </h1>
+        </button>
+
         <div className="flex gap-2">
           <div className="flex gap-3 text-lg text-park-gray">
-            <div className="relative group">
-              <button
-                type="button"
-                onClick={() =>
-                  setTableView((current) =>
-                    current === "reports" ? "jobs" : "reports",
-                  )
-                }
-                className="cursor-pointer underline transition-all duration-200 ease-in-out hover:text-park-green"
-              >
-                {tableView === "reports" ? "Work Reports" : "Jobs"}
-              </button>
-            </div>
-
-            <div className="relative group">
+            <div className="relative group ">
               <button
                 type="button"
                 className="cursor-pointer underline transition-all duration-200 ease-in-out hover:text-park-green"
@@ -141,7 +138,7 @@ export default function WorkReportTable({
               </div>
             </div>
 
-            <div className="relative group">
+            <div className="relative group mr-5">
               <button
                 type="button"
                 className="underline cursor-pointer transition-all ease-in-out hover:text-park-green duration-200"
