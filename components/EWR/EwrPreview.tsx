@@ -276,7 +276,7 @@ export default function EWRPreview({
               {/* Main document border */}
               <div className="flex min-h-0 flex-1 flex-col border border-black">
                 {/* Header */}
-                <header className="relative h-[23%] shrink-0 border-b border-black px-[1.2%] py-[1.5%]">
+                <header className="relative h-[23%] shrink-0  px-[1.2%] py-[1.5%]">
                   <div className="grid grid-cols-[28%_44%_28%] items-start">
                     <div>
                       <Image
@@ -349,6 +349,7 @@ export default function EWRPreview({
 
                   <ReportSection
                     columns="grid-cols-[62%_10%_10%_18%]"
+                    headerBorder
                     headers={["Classification", "Hrs.", "Rate", "Amount"]}
                     rows={formData.labour.map((row) => {
                       const amount = calculateAmount(row.hours, row.rate);
@@ -367,6 +368,7 @@ export default function EWRPreview({
                   {/* Equipment */}
                   <ReportSection
                     columns="grid-cols-[45%_17%_9%_10%_19%]"
+                    headerBorder
                     headers={[
                       "Equipment & Rented Trucks Name",
                       "Unit No.",
@@ -374,6 +376,7 @@ export default function EWRPreview({
                       "Rate",
                       "Amount",
                     ]}
+
                     rows={formData.equipment.map((row) => {
                       const amount = calculateAmount(row.hours, row.rate);
 
@@ -392,6 +395,7 @@ export default function EWRPreview({
                   {/* Materials */}
                   <ReportSection
                     columns="grid-cols-[45%_17%_10%_10%_18%]"
+                    headerBorder
                     headers={["Materials", "Unit", "Qty.", "Price", "Amount"]}
                     rows={formData.materials.map((row) => {
                       const amount = calculateAmount(row.quantity, row.price);
@@ -413,6 +417,7 @@ export default function EWRPreview({
                   {/* Invoices */}
                   <ReportSection
                     columns="grid-cols-[62%_10%_10%_18%]"
+                    headerBorder
                     headers={["Invoices", "Cost", "Mark Up %", "Amount"]}
                     rows={formData.invoices.map((row) => {
                       const amount = calculateMarkup(row.cost, row.markup);
@@ -665,11 +670,13 @@ type ReportSectionProps = {
   rows: string[][];
   totalLabel: string;
   total: number;
+  headerBorder: boolean;
 };
 
 function ReportSection({
   columns,
   headers,
+  headerBorder = false,
   rows,
   totalLabel,
   total,
@@ -700,7 +707,9 @@ function ReportSection({
     >
       {/* Column headers */}
       <div
-        className={`grid h-5 shrink-0 bg-zinc-300 text-[7px] font-bold ${columns}`}
+        className={`grid h-5 shrink-0 bg-zinc-300 text-[7px] font-bold ${columns} ${
+          headerBorder ? "border-y border-black" : ""
+        }`}
       >
         {headers.map((header, index) => (
           <div

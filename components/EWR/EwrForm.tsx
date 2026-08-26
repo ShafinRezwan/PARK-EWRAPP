@@ -640,7 +640,7 @@ export default function EWRForm({
                     ? format(parseLocalDate(formData.date), "MM/dd/yy")
                     : "Date"}
                 </span>
-                <CalendarIcon className="h-3 w-3 opacity-70" />
+                <CalendarIcon className="h-5 w-5 opacity-70" />
               </PopoverTrigger>
 
               <PopoverContent className="w-auto p-0 bg-white" align="start">
