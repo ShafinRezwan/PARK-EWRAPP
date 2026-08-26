@@ -20,6 +20,7 @@ type InvoiceSaveRow = Omit<
 type UpdateEWRBody = {
   jobNumber: string;
   jobId: string;
+  ewrNumber: string;
   recipient?: string;
   address ?: string;
   date: string;
@@ -55,6 +56,7 @@ export async function PUT(
       jobId,
       jobNumber,
       recipient,
+      ewrNumber,
       address,
       date,
       description,
@@ -144,9 +146,69 @@ export async function PUT(
       );
     }
 
-    // -----------------------------------------
-    // Labour
-    // -----------------------------------------
+    const finalEwrNumber = ewrNumber?.trim();
+
+  // -----------------------------------------
+  // Validate EWR number
+  // -----------------------------------------
+
+  if (!finalEwrNumber) {
+    return NextResponse.json(
+      {
+        error: "EWR number is required.",
+      },
+      {
+        status: 400,
+      },
+    );
+  }
+
+  const numericEwrNumber = Number(finalEwrNumber);
+
+  if (
+    !Number.isInteger(numericEwrNumber) ||
+    numericEwrNumber < 9801
+  ) {
+    return NextResponse.json(
+      {
+        error: "EWR number must be 9801 or greater.",
+      },
+      {
+        status: 400,
+      },
+    );
+  }
+
+  // -----------------------------------------
+  // Check for duplicate EWR number
+  // -----------------------------------------
+
+  const duplicateReport =
+    await prisma.extraWorkReport.findFirst({
+      where: {
+        jobId: job.id,
+        ewrNumber: finalEwrNumber,
+
+        NOT: {
+          id,
+        },
+      },
+    });
+
+  if (duplicateReport) {
+    return NextResponse.json(
+      {
+        error: `EWR #${finalEwrNumber} already exists for Job ${job.jobNumber}.`,
+      },
+      {
+        status: 409,
+      },
+    );
+  }
+
+  // -----------------------------------------
+  // Labour
+  // -----------------------------------------
 
     const labourRows = labour
       .filter(
@@ -453,6 +515,8 @@ for (const invoice of invoicesWithRemovedAttachments) {
             data: {
               jobId:
                 job.id,
+              
+              ewrNumber: finalEwrNumber,
 
               workDate:
                 new Date(
@@ -461,8 +525,8 @@ for (const invoice of invoicesWithRemovedAttachments) {
 
               recipient:
                 recipient?.trim() ||
-                null,
-              
+                null,                
+
               address:
                 address?.trim() || null,
 
