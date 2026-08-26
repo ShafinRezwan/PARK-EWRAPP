@@ -647,3 +647,101 @@ for (const invoice of invoicesWithRemovedAttachments) {
     );
   }
 }
+
+export async function DELETE(
+  request: Request,
+  { params }: Props,
+) {
+  try {
+    const { id } = await params;
+
+    // -----------------------------------------
+    // Find report
+    // -----------------------------------------
+
+    const report = await prisma.extraWorkReport.findUnique({
+      where: {
+        id,
+      },
+      include: {
+        attachments: true,
+      },
+    });
+
+    if (!report) {
+      return NextResponse.json(
+        {
+          error: "Work report could not be found.",
+        },
+        {
+          status: 404,
+        },
+      );
+    }
+
+    // -----------------------------------------
+    // Save Blob paths before DB deletion
+    // -----------------------------------------
+
+    const blobPathnames = report.attachments
+      .map((attachment) => attachment.pathname)
+      .filter(
+        (pathname): pathname is string =>
+          Boolean(pathname),
+      );
+
+    // -----------------------------------------
+    // Delete report
+    // -----------------------------------------
+
+    await prisma.extraWorkReport.delete({
+      where: {
+        id,
+      },
+    });
+
+    // -----------------------------------------
+    // Delete Blob files
+    // -----------------------------------------
+
+    const blobToken =
+      process.env.BLOB_READ_WRITE_TOKEN;
+
+    if (blobToken) {
+      for (const pathname of blobPathnames) {
+        try {
+          await del(pathname, {
+            token: blobToken,
+          });
+        } catch (error) {
+          console.error(
+            `Unable to delete Blob ${pathname}:`,
+            error,
+          );
+        }
+      }
+    }
+
+    // -----------------------------------------
+    // Success
+    // -----------------------------------------
+
+    return NextResponse.json({
+      message: `EWR ${report.ewrNumber} deleted successfully.`,
+    });
+  } catch (error) {
+    console.error("DELETE EWR ERROR:", error);
+
+    return NextResponse.json(
+      {
+        error:
+          error instanceof Error
+            ? error.message
+            : "Unable to delete work report.",
+      },
+      {
+        status: 500,
+      },
+    );
+  }
+}

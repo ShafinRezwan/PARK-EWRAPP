@@ -1,11 +1,11 @@
 "use client";
-import { useState } from "react";
+import { useRef, useState } from "react";
 import { divisions } from "@/types/ewr.types";
 import { Job } from "@/lib/jobs";
 import { useRouter } from "next/navigation";
 import { WorkReports } from "@/lib/workReports";
 import { format } from "date-fns";
-
+import DeleteModal from "@/components/DeleteModal";
 import EditJobModal from "@/components/EditJobModal";
 import Modal from "../Modal";
 
@@ -24,6 +24,20 @@ export default function WorkReportTable({
   const [selectedDivision, setSelectedDivision] = useState("All");
   const [selectYear, setSelectYear] = useState("All");
   const router = useRouter();
+
+  const [deletingReport, setDeletingReport] = useState<WorkReports | null>(
+    null,
+  );
+
+  const [isDeletingReport, setIsDeletingReport] = useState(false);
+
+  const [deleteReportError, setDeleteReportError] = useState("");
+
+  const [pressingReportId, setPressingReportId] = useState<string | null>(null);
+
+  const longPressTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  const longPressTriggered = useRef(false);
 
   const [editingJob, setEditingJob] = useState<Job | null>(null);
 
@@ -79,6 +93,71 @@ export default function WorkReportTable({
       String(currentYear - i),
     ),
   ];
+
+  function handleReportPressStart(report: WorkReports) {
+    longPressTriggered.current = false;
+
+    // Start  fill animation
+    setPressingReportId(report.id);
+
+    longPressTimer.current = setTimeout(() => {
+      longPressTriggered.current = true;
+      setDeleteReportError("");
+      setDeletingReport(report);
+    }, 750);
+  }
+
+  function handleReportPressEnd() {
+    if (longPressTimer.current) {
+      clearTimeout(longPressTimer.current);
+      longPressTimer.current = null;
+    }
+
+    // Cancel/reset fill
+    setPressingReportId(null);
+  }
+
+  function handleReportClick(report: WorkReports) {
+    if (longPressTriggered.current) {
+      longPressTriggered.current = false;
+      return;
+    }
+
+    router.push(`/create-ewr?id=${report.id}`);
+  }
+
+  async function handleDeleteReport() {
+    if (!deletingReport) {
+      return;
+    }
+
+    try {
+      setIsDeletingReport(true);
+      setDeleteReportError("");
+
+      const response = await fetch(`/api/ewr/${deletingReport.id}`, {
+        method: "DELETE",
+      });
+
+      const result = await response.json();
+
+      if (!response.ok) {
+        throw new Error(result.error ?? "Unable to delete work report.");
+      }
+
+      setDeletingReport(null);
+
+      router.refresh();
+    } catch (error) {
+      setDeleteReportError(
+        error instanceof Error
+          ? error.message
+          : "Unable to delete work report.",
+      );
+    } finally {
+      setIsDeletingReport(false);
+    }
+  }
 
   return (
     <section className="flex h-full flex-col border-black rounded-md border-[3px] px-4 py-2">
@@ -184,8 +263,31 @@ export default function WorkReportTable({
               {filteredReports.map((report) => (
                 <tr
                   key={report.id}
-                  onClick={() => router.push(`/create-ewr?id=${report.id}`)}
-                  className="cursor-pointer border-b-2 border-park-gray transition hover:bg-gray-100"
+                  onMouseDown={() => handleReportPressStart(report)}
+                  onMouseUp={handleReportPressEnd}
+                  onMouseLeave={handleReportPressEnd}
+                  onTouchStart={() => handleReportPressStart(report)}
+                  onTouchEnd={handleReportPressEnd}
+                  onClick={() => handleReportClick(report)}
+                  style={{
+                    backgroundImage:
+                      "linear-gradient(to right, #A1A1A1, #A1A1A1)",
+
+                    backgroundRepeat: "no-repeat",
+
+                    backgroundSize:
+                      pressingReportId === report.id ? "100% 100%" : "0% 100%",
+
+                    transition:
+                      pressingReportId === report.id
+                        ? "background-size 700ms linear"
+                        : "background-size 250ms ease-out",
+                  }}
+                  className={`cursor-pointer select-none border-b-2 border-park-gray transition-colors hover:bg-gray-100  ${
+                    pressingReportId === report.id
+                      ? "text-red-600"
+                      : "hover:bg-gray-100"
+                  }`}
                 >
                   <td className="px-3 py-3 text-center">
                     <div className="flex items-center justify-center gap-1">
@@ -251,6 +353,22 @@ export default function WorkReportTable({
           <EditJobModal job={editingJob} onClose={() => setEditingJob(null)} />
         )}
       </Modal>
+      <DeleteModal
+        isOpen={deletingReport !== null}
+        title="DELETE WORK REPORT"
+        itemLabel={
+          deletingReport
+            ? `Job ${deletingReport.jobNumber} - EWR #${deletingReport.ewrNumber}`
+            : ""
+        }
+        isDeleting={isDeletingReport}
+        error={deleteReportError}
+        onClose={() => {
+          setDeletingReport(null);
+          setDeleteReportError("");
+        }}
+        onDelete={handleDeleteReport}
+      />
     </section>
   );
 }
