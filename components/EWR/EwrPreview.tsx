@@ -65,6 +65,10 @@ export default function EWRPreview({
     (invoice) => invoice.name.trim() !== "" || invoice.cost.trim() !== "",
   );
 
+  const filledInvoiceCount = formData.invoices.filter(
+    (invoice) => invoice.name.trim() !== "" || invoice.cost.trim() !== "",
+  ).length;
+
   const invoiceMarkupTotal = formData.invoiceMarkups.reduce((total, markup) => {
     const percentage = Number(markup.markup) || 0;
 
@@ -437,29 +441,33 @@ export default function EWRPreview({
                       }),
 
                       // Subtotal + markups only when an invoice exists
-                      ...(hasInvoices
+                      // Subtotal only when there are 2+ filled invoices
+                      ...(filledInvoiceCount >= 2
                         ? [
                             [
                               "Invoice Subtotal",
                               "",
                               moneyFormatter.format(invoiceSubtotal),
                             ],
-
-                            ...formData.invoiceMarkups.map((markup) => {
-                              const percentage = Number(markup.markup) || 0;
-
-                              const markupAmount =
-                                invoiceSubtotal * (percentage / 100);
-
-                              return [
-                                `${markup.name} (${percentage}%)`,
-                                "",
-                                markupAmount !== 0
-                                  ? moneyFormatter.format(markupAmount)
-                                  : "",
-                              ];
-                            }),
                           ]
+                        : []),
+
+                      // Markups
+                      ...(hasInvoices
+                        ? formData.invoiceMarkups.map((markup) => {
+                            const percentage = Number(markup.markup) || 0;
+
+                            const markupAmount =
+                              invoiceSubtotal * (percentage / 100);
+
+                            return [
+                              `${markup.name} (${percentage}%)`,
+                              "",
+                              markupAmount !== 0
+                                ? moneyFormatter.format(markupAmount)
+                                : "",
+                            ];
+                          })
                         : []),
                     ]}
                     totalLabel="Total Invoices"
