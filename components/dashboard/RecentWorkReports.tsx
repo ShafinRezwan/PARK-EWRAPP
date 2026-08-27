@@ -37,7 +37,7 @@ export default function RecentWorkReports({ workReports, searchQuery }: Props) {
     <section className="flex min-h-0 flex-col border-black rounded-md border-[3px] px-4 py-2">
       <h1 className="text-park-green text-3xl mb-4">Recent Work Reports</h1>
 
-      <div className="max-h-80 overflow-y-auto pb-10 mx-2">
+      <div className="max-h-100 overflow-y-auto pb-10 mx-2">
         <table className="w-full border-collapse text-left">
           <thead className="sticky top-0 text-2xl text-park-gray bg-white ">
             <tr>
