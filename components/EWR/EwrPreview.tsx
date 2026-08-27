@@ -775,15 +775,16 @@ function ReportSection({
                     columnIndex === 0
                       ? "justify-start text-left"
                       : "justify-center text-center"
+                  } ${
+                    row[0] === "Invoice Subtotal" &&
+                    columnIndex === headers.length - 1
+                      ? "border-b-2 border-black"
+                      : ""
                   }`}
                 >
                   <span
                     className={`truncate ${
-                      row[0] === "Invoice Subtotal"
-                        ? columnIndex === headers.length - 1
-                          ? "font-bold underline underline-offset-2"
-                          : "font-bold"
-                        : ""
+                      row[0] === "Invoice Subtotal" ? "font-bold" : ""
                     }`}
                   >
                     {row[columnIndex] ?? ""}
