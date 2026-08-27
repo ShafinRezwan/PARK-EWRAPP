@@ -61,6 +61,10 @@ export default function EWRPreview({
     return total + (Number(row.cost) || 0);
   }, 0);
 
+  const hasInvoices = formData.invoices.some(
+    (invoice) => invoice.name.trim() !== "" || invoice.cost.trim() !== "",
+  );
+
   const invoiceMarkupTotal = formData.invoiceMarkups.reduce((total, markup) => {
     const percentage = Number(markup.markup) || 0;
 
@@ -421,7 +425,7 @@ export default function EWRPreview({
                     headerBorder
                     headers={["Invoices", "Cost", "Amount"]}
                     rows={[
-                      // Invoice rows
+                      // Invoices
                       ...formData.invoices.map((row) => {
                         const cost = Number(row.cost) || 0;
 
@@ -432,26 +436,33 @@ export default function EWRPreview({
                         ];
                       }),
 
-                      // Invoice subtotal
-                      ["Subtotal", "", moneyFormatter.format(invoiceSubtotal)],
+                      // Subtotal + markups only when an invoice exists
+                      ...(hasInvoices
+                        ? [
+                            [
+                              "Invoice Subtotal",
+                              "",
+                              moneyFormatter.format(invoiceSubtotal),
+                            ],
 
-                      // Markups
-                      ...formData.invoiceMarkups.map((markup) => {
-                        const percentage = Number(markup.markup) || 0;
+                            ...formData.invoiceMarkups.map((markup) => {
+                              const percentage = Number(markup.markup) || 0;
 
-                        const markupAmount =
-                          invoiceSubtotal * (percentage / 100);
+                              const markupAmount =
+                                invoiceSubtotal * (percentage / 100);
 
-                        return [
-                          `${markup.name} (${percentage}%)`,
-                          "",
-                          markupAmount !== 0
-                            ? moneyFormatter.format(markupAmount)
-                            : "",
-                        ];
-                      }),
+                              return [
+                                `${markup.name} (${percentage}%)`,
+                                "",
+                                markupAmount !== 0
+                                  ? moneyFormatter.format(markupAmount)
+                                  : "",
+                              ];
+                            }),
+                          ]
+                        : []),
                     ]}
-                    totalLabel="Total Invoice"
+                    totalLabel="Total Invoices"
                     total={invoiceTotal}
                   />
                 </div>
@@ -768,7 +779,7 @@ function ReportSection({
                 >
                   <span
                     className={`truncate ${
-                      row[0] === "Subtotal"
+                      row[0] === "Invoice Subtotal"
                         ? columnIndex === headers.length - 1
                           ? "font-bold underline underline-offset-2"
                           : "font-bold"

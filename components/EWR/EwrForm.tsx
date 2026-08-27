@@ -1326,10 +1326,12 @@ export default function EWRForm({
         {/* Final invoice total */}
 
         <div className="flex justify-end border-t-2 border-black pt-3">
-          <div className="flex w-72 justify-between text-xl font-bold">
+          <div className="flex w-40 justify-between text-xl font-bold">
             <span>Total:</span>
 
-            <span className="text-park-green">${invoiceTotal.toFixed(2)}</span>
+            <span className="text-park-green  text-lg">
+              ${invoiceTotal.toFixed(2)}
+            </span>
           </div>
         </div>
       </section>
