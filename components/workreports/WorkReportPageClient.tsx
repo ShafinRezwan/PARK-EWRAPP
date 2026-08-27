@@ -9,7 +9,7 @@ import CreateEWRModal from "@/components/CreateEWRModal";
 import { Button } from "@base-ui/react";
 import WorkReportTable from "@/components/workreports/WorkReportTable";
 import { Job } from "@/lib/jobs";
-import { WorkReports } from "@/lib/workReports";
+import type { WorkReports } from "@/types/ewr.types";
 
 type Props = {
   jobs: Job[];
