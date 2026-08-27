@@ -2,26 +2,11 @@
 
 import { prisma } from "@/lib/prisma";
 import type {
-  EWRFormData,
+  EWRFormData, WorkReports,
 } from "@/types/ewr.types";
 
 
-export type WorkReports = {
-  id: string;
-  jobNumber: string;
-  jobName: string;
-  ewrNumber: string;
-  dateOfWork: string;
-  address: string;
-   status:
-    | "DRAFT"
-    | "PENDING_APPROVAL"
-    | "NEEDS_REVISION"
-    | "APPROVED"
-    | "SENT";
-  divisionCode: string;
-  year: string;
-};
+
 
 export async function getWorkReports(): Promise<WorkReports[]> {
   const reports = await prisma.extraWorkReport.findMany({

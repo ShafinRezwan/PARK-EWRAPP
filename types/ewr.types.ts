@@ -62,6 +62,25 @@ export type EWRFormData = {
   invoiceMarkups: InvoiceMarkupRow[];
 };
 
+export type WorkReports = {
+  id: string;
+  jobNumber: string;
+  jobName: string;
+  ewrNumber: string;
+  dateOfWork: string;
+  address: string;
+  status:
+    | "DRAFT"
+    | "PENDING_APPROVAL"
+    | "NEEDS_REVISION"
+    | "APPROVED"
+    | "SENT";
+  divisionCode: string;
+  year: string;
+};
+
+
+
 export const divisions = [
   { code: "01", name: "Construction" },
   { code: "03", name: "ARC" },

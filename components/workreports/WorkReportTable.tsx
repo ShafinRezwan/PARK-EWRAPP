@@ -3,7 +3,7 @@ import { useRef, useState } from "react";
 import { divisions } from "@/types/ewr.types";
 import { Job } from "@/lib/jobs";
 import { useRouter } from "next/navigation";
-import { WorkReports } from "@/lib/workReports";
+import type { WorkReports } from "@/types/ewr.types";
 import { format } from "date-fns";
 import DeleteModal from "@/components/DeleteModal";
 import EditJobModal from "@/components/EditJobModal";
