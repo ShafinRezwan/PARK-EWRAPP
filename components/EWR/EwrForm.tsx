@@ -25,6 +25,7 @@ import type {
   EquipmentFormRow,
   MaterialFormRow,
   InvoiceFormRow,
+  InvoiceMarkupRow,
   InvoiceAttachment,
 } from "../../types/ewr.types.js";
 
@@ -68,8 +69,7 @@ const labourGrid = "md:grid-cols-[minmax(150px,2fr)_90px_90px_110px_40px]";
 const equipmentGrid =
   "md:grid-cols-[minmax(150px,2fr)_90px_90px_90px_110px_40px]";
 
-const invoiceGrid =
-  "md:grid-cols-[minmax(150px,2fr)_90px_90px_90px_150px_50px]";
+const invoiceGrid = "md:grid-cols-[minmax(150px,2fr)_120px_120px_150px_50px]";
 
 function SectionHeader({ title, onAdd, disabled = false }: SectionHeaderProps) {
   return (
@@ -484,7 +484,6 @@ export default function EWRForm({
             id: createId(),
             name: "",
             cost: "",
-            markup: "",
             amount: "",
             invoiceAttachment: null,
           },
@@ -492,6 +491,59 @@ export default function EWRForm({
       };
     });
   };
+
+  const addInvoiceMarkup = () => {
+    setFormData((current) => ({
+      ...current,
+      invoiceMarkups: [
+        ...current.invoiceMarkups,
+        {
+          id: createId(),
+          name: "Mark Up",
+          markup: "",
+        },
+      ],
+    }));
+  };
+
+  const updateInvoiceMarkup = (
+    id: string,
+    field: "name" | "markup",
+    value: string,
+  ) => {
+    setFormData((current) => ({
+      ...current,
+      invoiceMarkups: current.invoiceMarkups.map((markup) =>
+        markup.id === id
+          ? {
+              ...markup,
+              [field]: value,
+            }
+          : markup,
+      ),
+    }));
+  };
+
+  const removeInvoiceMarkup = (id: string) => {
+    setFormData((current) => ({
+      ...current,
+      invoiceMarkups: current.invoiceMarkups.filter(
+        (markup) => markup.id !== id,
+      ),
+    }));
+  };
+
+  const invoiceSubtotal = formData.invoices.reduce((total, invoice) => {
+    return total + (Number(invoice.cost) || 0);
+  }, 0);
+
+  const invoiceMarkupTotal = formData.invoiceMarkups.reduce((total, markup) => {
+    const percentage = Number(markup.markup) || 0;
+
+    return total + invoiceSubtotal * (percentage / 100);
+  }, 0);
+
+  const invoiceTotal = invoiceSubtotal + invoiceMarkupTotal;
 
   const getJobMatches = (searchValue: string) => {
     const search = searchValue.toLowerCase().trim();
@@ -1098,18 +1150,15 @@ export default function EWRForm({
           <div
             className={`hidden gap-3 font-bold underline md:grid ${invoiceGrid}`}
           >
-            <span className="text-left pl-1">Name</span>
+            <span className="pl-1 text-left">Name</span>
             <span className="text-center">Cost</span>
-            <span className="text-center">Mark Up %</span>
             <span className="text-center">Amount</span>
+            <span className="text-center">Attachment</span>
+            <span />
           </div>
 
           {formData.invoices.map((row) => {
-            const baseAmount = Number(row.cost) || 0;
-
-            const markup = Number(row.markup) || 0;
-
-            const total = baseAmount + baseAmount * (markup / 100);
+            const amount = Number(row.cost) || 0;
 
             return (
               <div
@@ -1122,7 +1171,6 @@ export default function EWRForm({
                     onChange={(event) =>
                       updateInvoiceRow(row.id, "name", event.target.value)
                     }
-
                     className={compactInputClassName}
                   />
                 </Field>
@@ -1136,16 +1184,14 @@ export default function EWRForm({
                     onChange={(event) => {
                       let value = event.target.value;
 
-                      // Remove everything except digits and one decimal point
                       value = value.replace(/[^\d.]/g, "");
 
-                      // Allow only one decimal point
                       const parts = value.split(".");
+
                       if (parts.length > 2) {
                         value = `${parts[0]}.${parts.slice(1).join("")}`;
                       }
 
-                      // Limit to 2 decimal places
                       if (parts[1]) {
                         value = `${parts[0]}.${parts[1].slice(0, 2)}`;
                       }
@@ -1156,26 +1202,12 @@ export default function EWRForm({
                   />
                 </Field>
 
-                <Field label="Markup %" className="md:[&>span]:hidden">
-                  <input
-                    type="number"
-                    min="0"
-                    step="1"
-                    value={row.markup}
-                    onChange={(event) =>
-                      updateInvoiceRow(row.id, "markup", event.target.value)
-                    }
-                    className={compactInputClassName}
-                  />
-                </Field>
                 <div className="text-center">
-                  <span className="whitespace-nowrap text-base font-semibold text-park-green">
-                    ${total.toFixed(2)}
-                  </span>
+                  <CurrencyAmount amount={amount} />
                 </div>
 
-                <div className=" ">
-                  <label className="inline-flex cursor-pointer items-center rounded-md bg-orange-400 px-6 py-2 text-sm font-semibold text-white hover:bg-zinc-700">
+                <div>
+                  <label className="inline-flex cursor-pointer items-center rounded-md bg-orange-400 px-6 py-2 text-sm font-semibold text-white transition hover:bg-zinc-700">
                     Attach Invoice
                     <input
                       type="file"
@@ -1206,6 +1238,99 @@ export default function EWRForm({
               </div>
             );
           })}
+        </div>
+
+        {/* Invoice subtotal */}
+
+        <div className="flex justify-end border-t-2 border-black pt-3">
+          <div className="flex w-72 justify-between text-lg font-semibold">
+            <span>Invoice Subtotal:</span>
+
+            <span className="text-park-green">
+              ${invoiceSubtotal.toFixed(2)}
+            </span>
+          </div>
+        </div>
+
+        {/* Markups */}
+
+        <div className="mt-5 space-y-3">
+          <div className="flex h-10 items-center justify-between rounded-md bg-black">
+            <h3 className="p-4 text-lg font-bold text-white">
+              Invoice Markups
+            </h3>
+
+            <button
+              type="button"
+              onClick={addInvoiceMarkup}
+              className="h-full cursor-pointer rounded-r-md bg-park-green px-4 font-semibold text-white transition hover:bg-park-green-dark"
+            >
+              Add Markup +
+            </button>
+          </div>
+
+          {formData.invoiceMarkups.map((markup) => {
+            const percentage = Number(markup.markup) || 0;
+            const markupAmount = invoiceSubtotal * (percentage / 100);
+
+            return (
+              <div
+                key={markup.id}
+                className="grid grid-cols-[1fr_120px_120px_40px] items-center gap-3"
+              >
+                {/* Markup description */}
+                <input
+                  type="text"
+                  value={markup.name}
+                  onChange={(event) =>
+                    updateInvoiceMarkup(markup.id, "name", event.target.value)
+                  }
+                  placeholder="Markup description"
+                  className={compactInputClassName}
+                />
+
+                {/* Percentage */}
+                <div className="relative">
+                  <input
+                    type="number"
+                    min="0"
+                    step="0.1"
+                    value={markup.markup}
+                    onChange={(event) =>
+                      updateInvoiceMarkup(
+                        markup.id,
+                        "markup",
+                        event.target.value,
+                      )
+                    }
+                    placeholder="0"
+                    className={`${compactInputClassName} pr-7`}
+                  />
+
+                  <span className="pointer-events-none absolute right-3 top-1/2 -translate-y-1/2">
+                    %
+                  </span>
+                </div>
+
+                {/* Calculated markup amount */}
+                <div className="text-right font-semibold text-park-green">
+                  +${markupAmount.toFixed(2)}
+                </div>
+
+                <RemoveButton onClick={() => removeInvoiceMarkup(markup.id)} />
+              </div>
+            );
+          })}
+        </div>
+
+        {/* Final invoice total */}
+
+        <div className="flex justify-end border-t-2 border-black pt-3">
+          <div className="flex w-72 justify-between text-xl font-bold">
+            <span>Total:</span>
+
+            <span className="text-park-green">${invoiceTotal.toFixed(2)}</span>
+          </div>
         </div>
       </section>
     </form>

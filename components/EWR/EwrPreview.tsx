@@ -20,13 +20,6 @@ function calculateAmount(quantity: string, rate: string) {
   return (Number(quantity) || 0) * (Number(rate) || 0);
 }
 
-function calculateMarkup(cost: string, markup: string) {
-  const parsedCost = Number(cost) || 0;
-  const parsedMarkup = Number(markup) || 0;
-
-  return parsedCost + parsedCost * (parsedMarkup / 100);
-}
-
 function formatDate(date: string) {
   if (!date) return "";
 
@@ -64,9 +57,17 @@ export default function EWRPreview({
     0,
   );
 
-  const invoiceTotal = formData.invoices.reduce((total, row) => {
-    return total + calculateMarkup(row.cost, row.markup);
+  const invoiceSubtotal = formData.invoices.reduce((total, row) => {
+    return total + (Number(row.cost) || 0);
   }, 0);
+
+  const invoiceMarkupTotal = formData.invoiceMarkups.reduce((total, markup) => {
+    const percentage = Number(markup.markup) || 0;
+
+    return total + invoiceSubtotal * (percentage / 100);
+  }, 0);
+
+  const invoiceTotal = invoiceSubtotal + invoiceMarkupTotal;
 
   const grandTotal =
     labourTotal + equipmentTotal + materialTotal + invoiceTotal;
@@ -109,11 +110,11 @@ export default function EWRPreview({
           id: invoice.id,
           name: invoice.name,
           cost: invoice.cost,
-          markup: invoice.markup,
           amount: invoice.amount,
 
           hasAttachment: !!invoice.invoiceAttachment,
         })),
+        invoiceMarkups: formData.invoiceMarkups,
       };
 
       const response = await fetch(
@@ -416,19 +417,40 @@ export default function EWRPreview({
 
                   {/* Invoices */}
                   <ReportSection
-                    columns="grid-cols-[62%_10%_10%_18%]"
+                    columns="grid-cols-[62%_20%_18%]"
                     headerBorder
-                    headers={["Invoices", "Cost", "Mark Up %", "Amount"]}
-                    rows={formData.invoices.map((row) => {
-                      const amount = calculateMarkup(row.cost, row.markup);
+                    headers={["Invoices", "Cost", "Amount"]}
+                    rows={[
+                      // Invoice rows
+                      ...formData.invoices.map((row) => {
+                        const cost = Number(row.cost) || 0;
 
-                      return [
-                        row.name,
-                        row.cost ? moneyFormatter.format(Number(row.cost)) : "",
-                        row.markup,
-                        amount !== 0 ? moneyFormatter.format(amount) : "",
-                      ];
-                    })}
+                        return [
+                          row.name,
+                          row.cost ? moneyFormatter.format(cost) : "",
+                          cost !== 0 ? moneyFormatter.format(cost) : "",
+                        ];
+                      }),
+
+                      // Invoice subtotal
+                      ["Subtotal", "", moneyFormatter.format(invoiceSubtotal)],
+
+                      // Markups
+                      ...formData.invoiceMarkups.map((markup) => {
+                        const percentage = Number(markup.markup) || 0;
+
+                        const markupAmount =
+                          invoiceSubtotal * (percentage / 100);
+
+                        return [
+                          `${markup.name} (${percentage}%)`,
+                          "",
+                          markupAmount !== 0
+                            ? moneyFormatter.format(markupAmount)
+                            : "",
+                        ];
+                      }),
+                    ]}
                     totalLabel="Total Invoice"
                     total={invoiceTotal}
                   />
@@ -744,7 +766,17 @@ function ReportSection({
                       : "justify-center text-center"
                   }`}
                 >
-                  <span className="truncate">{row[columnIndex] ?? ""}</span>
+                  <span
+                    className={`truncate ${
+                      row[0] === "Subtotal"
+                        ? columnIndex === headers.length - 1
+                          ? "font-bold underline underline-offset-2"
+                          : "font-bold"
+                        : ""
+                    }`}
+                  >
+                    {row[columnIndex] ?? ""}
+                  </span>
                 </div>
               ))}
             </div>

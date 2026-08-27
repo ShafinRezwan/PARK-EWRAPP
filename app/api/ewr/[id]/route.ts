@@ -8,6 +8,7 @@ import type {
   EquipmentFormRow,
   MaterialFormRow,
   InvoiceFormRow,
+  InvoiceMarkupRow,
 } from "@/types/ewr.types";
 
 type InvoiceSaveRow = Omit<
@@ -30,6 +31,7 @@ type UpdateEWRBody = {
   equipment?: EquipmentFormRow[];
   materials?: MaterialFormRow[];
   invoices?: InvoiceSaveRow[];
+  invoiceMarkups?: InvoiceMarkupRow[];
 };
 
 type Props = {
@@ -64,6 +66,7 @@ export async function PUT(
       equipment = [],
       materials = [],
       invoices = [],
+      invoiceMarkups = [],
     } = body;
 
     // -----------------------------------------
@@ -317,11 +320,18 @@ export async function PUT(
       id: row.id,
       name: row.name.trim(),
       cost: Number(row.cost) || 0,
-      markup: Number(row.markup) || 0,
-
       hasAttachment: row.hasAttachment === true,
     };
   });
+
+
+  const invoiceMarkupRows = invoiceMarkups
+   .filter((row) => row.name.trim() !== "" || row.markup !== "")
+  .map((row) => ({
+    id: row.id,
+    name: row.name.trim(),
+    markup: Number(row.markup) || 0,
+  }));
 
     // -----------------------------------------
     // IDs of invoices still in the form
@@ -372,6 +382,52 @@ export async function PUT(
               reportId: id,
             },
           });
+
+          
+          // -------------------------------------
+          // Delete/rebuild invoice markups
+          // -------------------------------------
+
+          await tx.eWRInvoiceMarkupRow.deleteMany({
+            where: {
+              reportId: id,
+            },
+          });
+
+          // existing invoice removal / attachment logic...
+
+          for (const invoice of invoiceRows) {
+            await tx.eWRInvoiceRow.upsert({
+              where: {
+                id: invoice.id,
+              },
+
+              update: {
+                name: invoice.name,
+                cost: invoice.cost,
+                reportId: id,
+              },
+
+              create: {
+                id: invoice.id,
+                name: invoice.name,
+                cost: invoice.cost,
+                reportId: id,
+              },
+            });
+          }
+
+          if (invoiceMarkupRows.length > 0) {
+            await tx.eWRInvoiceMarkupRow.createMany({
+              data: invoiceMarkupRows.map((row) => ({
+                id: row.id,
+                name: row.name,
+                markup: row.markup,
+                reportId: id,
+              })),
+            });
+          }
+
 
           // -------------------------------------
           // Find invoices removed from this EWR
@@ -479,9 +535,7 @@ for (const invoice of invoicesWithRemovedAttachments) {
                 cost:
                   invoice.cost,
 
-                markup:
-                  invoice.markup,
-
+              
                 reportId: id,
               },
 
@@ -495,8 +549,6 @@ for (const invoice of invoicesWithRemovedAttachments) {
                 cost:
                   invoice.cost,
 
-                markup:
-                  invoice.markup,
 
                 reportId: id,
               },

@@ -86,6 +86,7 @@ export async function getWorkReportById(
         attachment: true,
       },
     },
+    invoiceMarkups: true,
   },
 });
 
@@ -98,65 +99,64 @@ export async function getWorkReportById(
     ewrNumber: report.ewrNumber,
 
     formData: {
-      jobId: report.job?.id ?? "",
+  jobId: report.job?.id ?? "",
 
-      recipient: report.recipient ?? "",
-      jobNumber: report.job?.jobNumber ?? "",
-      jobName: report.job?.jobName ?? "",
-      address: report.address ?? "",
-      date: report.workDate.toISOString().split("T")[0],
-      description: report.description,
-      ewrNumber: report.ewrNumber ?? "",
+  recipient: report.recipient ?? "",
+  jobNumber: report.job?.jobNumber ?? "",
+  jobName: report.job?.jobName ?? "",
+  address: report.address ?? "",
+  date: report.workDate.toISOString().split("T")[0],
+  description: report.description,
+  ewrNumber: report.ewrNumber ?? "",
 
-      labour: report.labourEntries.map((row) => ({
-        id: row.id,
-        classification: row.classification,
-        hours: String(row.hours),
-        rate: String(row.rate),
-      })),
+  labour: report.labourEntries.map((row) => ({
+    id: row.id,
+    classification: row.classification,
+    hours: String(row.hours),
+    rate: String(row.rate),
+  })),
 
-      equipment: report.equipmentEntries.map((row) => ({
-        id: row.id,
-        name: row.name,
-        unitNumber: row.unitNumber,
-        hours: String(row.hours),
-        rate: String(row.rate),
-      })),
+  equipment: report.equipmentEntries.map((row) => ({
+    id: row.id,
+    name: row.name,
+    unitNumber: row.unitNumber,
+    hours: String(row.hours),
+    rate: String(row.rate),
+  })),
 
-      materials: report.materialEntries.map((row) => ({
-        id: row.id,
-        name: row.name,
-        unit: row.unit,
-        quantity: String(row.quantity),
-        price: String(row.price),
-      })),
+  materials: report.materialEntries.map((row) => ({
+    id: row.id,
+    name: row.name,
+    unit: row.unit,
+    quantity: String(row.quantity),
+    price: String(row.price),
+  })),
 
-      invoices: report.invoices.map((row) => {
-        const attachment = row.attachment[0] ?? null;
+  invoices: report.invoices.map((row) => {
+    const attachment = row.attachment[0] ?? null;
 
-        return {
-          id: row.id,
-          name: row.name,
-          cost: String(row.cost),
-          markup: String(row.markup),
+    return {
+      id: row.id,
+      name: row.name,
+      cost: String(row.cost),
+      amount: String(row.cost),
 
-          amount: String(
-            Number(row.cost) +
-              Number(row.cost) *
-                (Number(row.markup) / 100),
-          ),
+      invoiceAttachment: attachment
+        ? {
+            id: attachment.id,
+            file: null,
+            fileName: attachment.fileName,
+            fileType: attachment.fileType,
+            previewUrl: `/api/attachments/${attachment.id}`,
+          }
+        : null,
+    };
+  }),
 
-          invoiceAttachment: attachment
-            ? {
-                id: attachment.id,
-                file: null,
-                fileName: attachment.fileName,
-                fileType: attachment.fileType,
-                previewUrl: `/api/attachments/${attachment.id}`,
-              }
-            : null,
-        };
-      }),
-    },
-  };
+  invoiceMarkups: report.invoiceMarkups.map((row) => ({
+    id: row.id,
+     name: row.name,
+    markup: String(row.markup),
+  })),
+},}
 }

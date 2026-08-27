@@ -96,11 +96,11 @@ const initialFormData: EWRFormData = {
       id: createId(),
       name: "",
       cost: "",
-      markup: "",
       amount: "",
       invoiceAttachment: null,
     },
   ],
+  invoiceMarkups: [],
 };
 
 type Props = {
@@ -141,6 +141,7 @@ export default function CreateEWRClient({
       return {
         ...existingReport,
         ewrNumber: existingReport.ewrNumber || ewrNumber || "",
+        invoiceMarkups: existingReport.invoiceMarkups ?? [],
       };
     }
 

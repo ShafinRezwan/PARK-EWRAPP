@@ -25,10 +25,16 @@ export type InvoiceFormRow = {
   id: string;
   name: string;
   cost: string;
-  markup: string;
   amount: string;
   invoiceAttachment: InvoiceAttachment | null;
 };
+
+export type InvoiceMarkupRow = {
+  id: string;
+  name: string;
+  markup: string;
+};
+
 
 export type InvoiceAttachment = {
   id: string;
@@ -53,6 +59,7 @@ export type EWRFormData = {
   equipment: EquipmentFormRow[];
   materials: MaterialFormRow[];
   invoices: InvoiceFormRow[];
+  invoiceMarkups: InvoiceMarkupRow[];
 };
 
 export const divisions = [
