@@ -615,13 +615,14 @@ function PdfAttachmentPages({
   const [pages, setPages] = useState<string[]>([]);
 
   useEffect(() => {
+    // A new attachment has `file`.
+    // A saved attachment has `previewUrl`.
     if (!file && !previewUrl) return;
 
     let cancelled = false;
 
     async function renderPdf() {
       try {
-        // Only load PDF.js in the browser
         const pdfjsLib = await import("pdfjs-dist");
 
         pdfjsLib.GlobalWorkerOptions.workerSrc = `https://unpkg.com/pdfjs-dist@${pdfjsLib.version}/build/pdf.worker.min.mjs`;
@@ -629,12 +630,16 @@ function PdfAttachmentPages({
         let bytes: ArrayBuffer;
 
         if (file) {
+          // Newly selected PDF
           bytes = await file.arrayBuffer();
         } else {
+          // Previously saved PDF
           const response = await fetch(previewUrl);
 
           if (!response.ok) {
-            throw new Error("Unable to load saved PDF attachment.");
+            throw new Error(
+              `Unable to load saved PDF attachment. Status: ${response.status}`,
+            );
           }
 
           bytes = await response.arrayBuffer();
@@ -659,9 +664,7 @@ function PdfAttachmentPages({
 
           const context = canvas.getContext("2d");
 
-          if (!context) {
-            continue;
-          }
+          if (!context) continue;
 
           canvas.width = viewport.width;
           canvas.height = viewport.height;
