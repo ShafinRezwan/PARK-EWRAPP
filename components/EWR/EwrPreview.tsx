@@ -120,7 +120,7 @@ export default function EWRPreview({
           cost: invoice.cost,
           amount: invoice.amount,
 
-          hasAttachment: !!invoice.invoiceAttachment,
+          hasAttachment: !!invoice.invoiceAttachment?.file,
         })),
         invoiceMarkups: formData.invoiceMarkups,
       };
@@ -615,7 +615,7 @@ function PdfAttachmentPages({
   const [pages, setPages] = useState<string[]>([]);
 
   useEffect(() => {
-    if (!file) return;
+    if (!file && !previewUrl) return;
 
     let cancelled = false;
 
@@ -688,7 +688,7 @@ function PdfAttachmentPages({
     return () => {
       cancelled = true;
     };
-  }, [file]);
+  }, [file, previewUrl]);
 
   return (
     <>

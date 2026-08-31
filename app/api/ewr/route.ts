@@ -17,7 +17,9 @@ export const runtime = "nodejs";
 type InvoiceSaveRow = Omit<
   InvoiceFormRow,
   "invoiceAttachment"
->;
+> & {
+  hasAttachment?: boolean;
+};
 
 type CreateEWRBody = {
   jobId: string;
@@ -291,24 +293,21 @@ export async function POST(request: Request) {
     // Invoices
     // -----------------------------------------
 
-    const invoiceRows = invoices
-      .filter((row) => {
-        return (
-          row.name.trim() !== "" ||
-          row.cost !== ""
-        );
-      })
-      .map((row) => {
-        return {
-          id: row.id,
-
-          name:
-            row.name.trim(),
-
-          cost:
-            Number(row.cost) || 0,
-        };
-      });
+   const invoiceRows = invoices
+    .filter((row) => {
+      return (
+        row.name.trim() !== "" ||
+        row.cost !== "" ||
+        row.hasAttachment === true
+      );
+    })
+    .map((row) => {
+      return {
+        id: row.id,
+        name: row.name.trim(),
+        cost: Number(row.cost) || 0,
+      };
+    });
 
     // -----------------------------------------
     // Invoice markups
