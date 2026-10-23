@@ -1,550 +1,201 @@
 import { NextResponse } from "next/server";
+import { randomUUID } from "node:crypto";
 import * as XLSX from "xlsx";
-
-import { prisma } from "@/lib/prisma";
+import { pool } from "@/lib/db";
+import { getCurrentUser } from "@/lib/auth";
 
 export const runtime = "nodejs";
 
-type LabourSpreadsheetRow = {
-  "Employee #"?: unknown;
-  "Base Work Class"?: unknown;
-  "Base Class Name"?: unknown;
-  Rate?: unknown;
-  "Saturday Rate"?: unknown;
-  "Sunday Rate"?: unknown;
-};
+type Category = "Labour" | "Equipment" | "Materials";
+type SpreadsheetRow = Record<string, unknown>;
 
-type EquipmentSpreadsheetRow = {
-  "Equipment #"?: unknown;
-  "Make,Model,Year"?: unknown;
-   "Make, Model, Year"?: unknown;
-   "Make, Model & Year"?: unknown;
+class UploadValidationError extends Error {}
 
-  Description?: unknown;
-  "Udf Archa Rate"?: unknown;
-  HorsePower?: unknown;
-  "Horse Power"?: unknown;
-  Horsepower?: unknown;
-};
-
-type MaterialSpreadsheetRow = {
-  Description?: unknown;
-  Unit?: unknown;
-};
-
-
-function normalizeHeader(header: string) {
-  return header
-    .toLowerCase()
-    .replace(/[^a-z0-9]/g, "");
+function normalizeHeader(value: string): string {
+  return value.toLowerCase().replace(/[^a-z0-9]/g, "");
 }
 
-function normalizeRow(
-  row: Record<string, unknown>,
-): Record<string, unknown> {
+function normalizeRow(row: SpreadsheetRow): SpreadsheetRow {
   return Object.fromEntries(
-    Object.entries(row).map(([key, value]) => [
-      normalizeHeader(key),
-      value,
-    ]),
+    Object.entries(row).map(([key, value]) => [normalizeHeader(key), value])
   );
 }
 
-function getValue(
-  row: Record<string, unknown>,
-  aliases: string[],
-) {
+function getValue(row: SpreadsheetRow, aliases: string[]): unknown {
   for (const alias of aliases) {
-    const normalizedAlias = normalizeHeader(alias);
-
-    const value = row[normalizedAlias];
-
-    if (
-      value !== undefined &&
-      value !== null &&
-      value !== ""
-    ) {
-      return value;
-    }
+    const value = row[normalizeHeader(alias)];
+    if (value !== undefined && value !== null && value !== "") return value;
   }
-
   return "";
 }
 
+function textValue(row: SpreadsheetRow, aliases: string[]): string {
+  return String(getValue(row, aliases)).trim();
+}
 
-async function runInBatches<T>(
-  rows: T[],
-  batchSize: number,
-  handler: (batch: T[]) => Promise<void>,
-) {
-  for (let i = 0; i < rows.length; i += batchSize) {
-    const batch = rows.slice(i, i + batchSize);
-    await handler(batch);
+function numberValue(row: SpreadsheetRow, aliases: string[]): number {
+  const raw = getValue(row, aliases);
+  return raw === "" ? Number.NaN : Number(raw);
+}
+
+function requireText(value: string, row: number, label: string): void {
+  if (!value) throw new UploadValidationError(`Row ${row}: ${label} is required.`);
+}
+
+function requireMoney(value: number, row: number, label: string): void {
+  if (!Number.isFinite(value) || value < 0 || value > 99_999_999.99 ||
+      Math.abs(value * 100 - Math.round(value * 100)) > 1e-6) {
+    throw new UploadValidationError(`Row ${row}: ${label} must be a valid nonnegative amount with at most two decimals.`);
   }
 }
 
+function parseLabour(row: SpreadsheetRow, index: number) {
+  const r = normalizeRow(row), n = index + 2;
+  const employeeNumber = numberValue(r, ["Employee #", "Employee Number", "Employee No", "Employee ID"]);
+  const baseWorkClass = textValue(r, ["Base Work Class", "Work Class", "Base Class"]);
+  const baseClassName = textValue(r, ["Base Class Name", "Class Name", "Classification"]);
+  const rate = numberValue(r, ["Rate", "Regular Rate", "Hourly Rate"]);
+  const saturdayRate = numberValue(r, ["Saturday Rate", "Sat Rate"]);
+  const sundayRate = numberValue(r, ["Sunday Rate", "Sun Rate"]);
+  if (!Number.isSafeInteger(employeeNumber) || employeeNumber <= 0 || employeeNumber > 2147483647)
+    throw new UploadValidationError(`Row ${n}: Employee # must be a positive whole number.`);
+  requireText(baseWorkClass, n, "Base Work Class");
+  requireText(baseClassName, n, "Base Class Name");
+  requireMoney(rate, n, "Rate");
+  requireMoney(saturdayRate, n, "Saturday Rate");
+  requireMoney(sundayRate, n, "Sunday Rate");
+  return { employeeNumber, baseWorkClass, baseClassName, rate, saturdayRate, sundayRate };
+}
+
+function parseEquipment(row: SpreadsheetRow, index: number) {
+  const r = normalizeRow(row), n = index + 2;
+  const equipmentNumber = textValue(r, ["Equipment #", "Equipment Number", "Equipment No"]);
+  const makeModelYear = textValue(r, ["Make Model Year", "Make, Model, Year", "Make, Model,Year", "Make/Model/Year", "Make, Model & Year"]);
+  const description = textValue(r, ["Description", "Equipment Description"]);
+  const equipmentRate = numberValue(r, ["Udf Archa Rate", "Archa Rate", "Equipment Rate", "Rate"]);
+  const hpRaw = getValue(r, ["Horsepower", "Horse Power", "HP"]);
+  const horsePower = hpRaw === "" ? null : Number(hpRaw);
+  requireText(equipmentNumber, n, "Equipment #");
+  requireText(description, n, "Description");
+  requireMoney(equipmentRate, n, "Equipment rate");
+  if (horsePower !== null && (!Number.isInteger(horsePower) || horsePower < 0 || horsePower > 2147483647))
+    throw new UploadValidationError(`Row ${n}: Horse Power is invalid.`);
+  return { equipmentNumber, makeModelYear, description, equipmentRate, horsePower };
+}
+
+function parseMaterial(row: SpreadsheetRow, index: number) {
+  const r = normalizeRow(row), n = index + 2;
+  const materialType = textValue(r, ["Description", "Material", "Material Description", "Material Type", "Type"]);
+  const materialUnit = textValue(r, ["Unit", "Material Unit", "UOM", "Unit of Measure"]);
+  requireText(materialType, n, "Description");
+  requireText(materialUnit, n, "Unit");
+  return { materialType, materialUnit };
+}
 
 export async function POST(request: Request) {
   try {
+    const user = await getCurrentUser();
+    if (!user) return NextResponse.json({ error: "Unauthorized." }, { status: 401 });
+    if (!(["MASTER_USER", "ADMIN"] as string[]).includes(user.role))
+      return NextResponse.json({ error: "Forbidden." }, { status: 403 });
+
+    // Also configure an upload-size limit at your reverse proxy.
     const formData = await request.formData();
-
-    const uploadedFile = formData.get("file");
+    const file = formData.get("file");
     const category = formData.get("category");
+    if (!(file instanceof File))
+      return NextResponse.json({ error: "No valid spreadsheet was uploaded." }, { status: 400 });
+    if (category !== "Labour" && category !== "Equipment" && category !== "Materials")
+      return NextResponse.json({ error: "Invalid rate category." }, { status: 400 });
+    if (!/\.(xlsx|xls|csv)$/i.test(file.name))
+      return NextResponse.json({ error: "Please upload an XLSX, XLS, or CSV file." }, { status: 400 });
+    if (file.size === 0 || file.size > 10 * 1024 * 1024)
+      return NextResponse.json({ error: "Spreadsheet must be between 1 byte and 10 MB." }, { status: 413 });
 
-
-    
-    if (!(uploadedFile instanceof File)) {
-      return NextResponse.json(
-        { error: "No valid spreadsheet was uploaded." },
-        { status: 400 },
-      );
+    let workbook: XLSX.WorkBook;
+    try {
+      workbook = XLSX.read(await file.arrayBuffer(), { type: "array" });
+    } catch {
+      throw new UploadValidationError("Unable to read spreadsheet format.");
     }
+    const sheetName = workbook.SheetNames[0];
+    if (!sheetName) throw new UploadValidationError("The spreadsheet does not contain a worksheet.");
+    const sheet = workbook.Sheets[sheetName];
+    if (!sheet) throw new UploadValidationError("The first worksheet could not be read.");
+    const rows = XLSX.utils.sheet_to_json<SpreadsheetRow>(sheet, { defval: "" });
+    if (!rows.length) throw new UploadValidationError(`The spreadsheet contains no ${category.toLowerCase()}-rate rows.`);
+    if (rows.length > 20_000) throw new UploadValidationError("Spreadsheet exceeds the 20,000-row import limit.");
 
-    if (
-      category !== "Labour" &&
-      category !== "Equipment" &&
-      category !== "Materials"
-    ) {
-      return NextResponse.json(
-        { error: "Invalid rate category." },
-        { status: 400 },
-      );
-    }
+    // Parse and validate all rows before starting a transaction.
+    const parsed = category === "Labour"
+      ? rows.map(parseLabour)
+      : category === "Equipment"
+        ? rows.map(parseEquipment)
+        : rows.map(parseMaterial);
 
-    const fileName = uploadedFile.name.toLowerCase();
-
-    if (
-      !fileName.endsWith(".xlsx") &&
-      !fileName.endsWith(".xls") &&
-      !fileName.endsWith(".csv")
-    ) {
-      return NextResponse.json(
-        { error: "Please upload an XLSX, XLS, or CSV file." },
-        { status: 400 },
-      );
-    }
-
-    const fileBuffer = await uploadedFile.arrayBuffer();
-
-    const workbook = XLSX.read(fileBuffer);
-
-    const firstSheetName = workbook.SheetNames[0];
-
-    if (!firstSheetName) {
-      return NextResponse.json(
-        { error: "The spreadsheet does not contain a worksheet." },
-        { status: 400 },
-      );
-    }
-
-    const worksheet = workbook.Sheets[firstSheetName];
-
-    if (!worksheet) {
-      return NextResponse.json(
-        { error: "The first worksheet could not be read." },
-        { status: 400 },
-      );
-    }
-
-    // -----------------------------
-    // LABOUR
-    // -----------------------------
-
-    if (category === "Labour") {
-      const rows =
-        XLSX.utils.sheet_to_json<LabourSpreadsheetRow>(worksheet, {
-          defval: "",
-        });
-
-      if (rows.length === 0) {
-        return NextResponse.json(
-          { error: "The spreadsheet contains no labour-rate rows." },
-          { status: 400 },
-        );
+    const client = await pool.connect();
+    try {
+      await client.query("BEGIN");
+      if (category === "Labour") {
+        for (const row of parsed as ReturnType<typeof parseLabour>[]) {
+          await client.query(
+            `INSERT INTO "LabourRate"
+             ("id", "employeeNumber", "baseWorkClass", "baseClassName", "rate", "saturdayRate", "sundayRate", "createdAt", "updatedAt")
+             VALUES ($1,$2,$3,$4,$5,$6,$7,NOW(),NOW())
+             ON CONFLICT ("employeeNumber") DO UPDATE SET
+               "baseWorkClass" = EXCLUDED."baseWorkClass",
+               "baseClassName" = EXCLUDED."baseClassName",
+               "rate" = EXCLUDED."rate",
+               "saturdayRate" = EXCLUDED."saturdayRate",
+               "sundayRate" = EXCLUDED."sundayRate",
+               "updatedAt" = NOW()`,
+            [randomUUID(), row.employeeNumber, row.baseWorkClass, row.baseClassName, row.rate, row.saturdayRate, row.sundayRate]
+          );
+        }
+      } else if (category === "Equipment") {
+        for (const row of parsed as ReturnType<typeof parseEquipment>[]) {
+          await client.query(
+            `INSERT INTO "EquipmentRate"
+             ("id", "equipmentNumber", "makeModelYear", "description", "equipmentRate", "horsePower", "createdAt", "updatedAt")
+             VALUES ($1,$2,$3,$4,$5,$6,NOW(),NOW())
+             ON CONFLICT ("equipmentNumber") DO UPDATE SET
+               "makeModelYear" = EXCLUDED."makeModelYear",
+               "description" = EXCLUDED."description",
+               "equipmentRate" = EXCLUDED."equipmentRate",
+               "horsePower" = EXCLUDED."horsePower",
+               "updatedAt" = NOW()`,
+            [randomUUID(), row.equipmentNumber, row.makeModelYear, row.description, row.equipmentRate, row.horsePower]
+          );
+        }
+      } else {
+        for (const row of parsed as ReturnType<typeof parseMaterial>[]) {
+          await client.query(
+            `INSERT INTO "MaterialRate" ("id", "materialType", "materialUnit")
+             VALUES ($1,$2,$3)
+             ON CONFLICT ("materialType", "materialUnit") DO NOTHING`,
+            [randomUUID(), row.materialType, row.materialUnit]
+          );
+        }
       }
-
-      const parsedRows = rows.map((row, index) => {
-  const normalized = normalizeRow(
-    row as Record<string, unknown>,
-  );
-
-  const employeeNumber = Number(
-    getValue(normalized, [
-      "Employee #",
-      "Employee Number",
-      "Employee No",
-      "Employee ID",
-    ]),
-  );
-
-  const baseWorkClass = String(
-    getValue(normalized, [
-      "Base Work Class",
-      "Work Class",
-      "Base Class",
-    ]),
-  ).trim();
-
-  const baseClassName = String(
-    getValue(normalized, [
-      "Base Class Name",
-      "Class Name",
-      "Classification",
-    ]),
-  ).trim();
-
-  const rate = Number(
-    getValue(normalized, [
-      "Rate",
-      "Regular Rate",
-      "Hourly Rate",
-    ]),
-  );
-
-  const saturdayRate = Number(
-    getValue(normalized, [
-      "Saturday Rate",
-      "Sat Rate",
-    ]),
-  );
-
-  const sundayRate = Number(
-    getValue(normalized, [
-      "Sunday Rate",
-      "Sun Rate",
-    ]),
-  );
-
-  const spreadsheetRow = index + 2;
-
-  if (!Number.isInteger(employeeNumber) || employeeNumber <= 0) {
-    throw new Error(
-      `Row ${spreadsheetRow}: Employee # must be a positive whole number.`,
-    );
-  }
-
-  if (!baseWorkClass) {
-    throw new Error(
-      `Row ${spreadsheetRow}: Base Work Class is required.`,
-    );
-  }
-
-  if (!baseClassName) {
-    throw new Error(
-      `Row ${spreadsheetRow}: Base Class Name is required.`,
-    );
-  }
-
-  if (!Number.isFinite(rate) || rate < 0) {
-    throw new Error(
-      `Row ${spreadsheetRow}: Rate is invalid.`,
-    );
-  }
-
-  if (!Number.isFinite(saturdayRate) || saturdayRate < 0) {
-    throw new Error(
-      `Row ${spreadsheetRow}: Saturday Rate is invalid.`,
-    );
-  }
-
-  if (!Number.isFinite(sundayRate) || sundayRate < 0) {
-    throw new Error(
-      `Row ${spreadsheetRow}: Sunday Rate is invalid.`,
-    );
-  }
-
-  return {
-    employeeNumber,
-    baseWorkClass,
-    baseClassName,
-    rate,
-    saturdayRate,
-    sundayRate,
-  };
-});
-
-      await runInBatches(parsedRows, 100, async (batch) => {
-  await prisma.$transaction(
-    batch.map((row) =>
-      prisma.labourRate.upsert({
-        where: {
-          employeeNumber: row.employeeNumber,
-        },
-        update: {
-          baseWorkClass: row.baseWorkClass,
-          baseClassName: row.baseClassName,
-          rate: row.rate,
-          saturdayRate: row.saturdayRate,
-          sundayRate: row.sundayRate,
-        },
-        create: row,
-      }),
-    ),
-  );
-});
-
-      return NextResponse.json({
-        message: `${parsedRows.length} labour rates uploaded successfully.`,
-        uploadedCount: parsedRows.length,
-      });
-    }
-
-    // -----------------------------
-    // EQUIPMENT
-    // -----------------------------
-
-    if (category === "Equipment") {
-      const rows =
-        XLSX.utils.sheet_to_json<EquipmentSpreadsheetRow>(worksheet, {
-          defval: "",
-        });
-        console.log("EQUIPMENT HEADERS:", Object.keys(rows[0] ?? {}));
-console.log("FIRST EQUIPMENT ROW:", rows[0]);
-
-        
-
-      if (rows.length === 0) {
-        return NextResponse.json(
-          { error: "The spreadsheet contains no equipment-rate rows." },
-          { status: 400 },
-        );
+      await client.query("COMMIT");
+    } catch (error) {
+      try { await client.query("ROLLBACK"); } catch (rollbackError) {
+        console.error("RATE UPLOAD ROLLBACK ERROR:", rollbackError);
       }
-
-      const parsedRows = rows.map((row, index) => {
- const normalized = normalizeRow(
-  row as Record<string, unknown>,
-);
-
-const equipmentNumber = String(
-  getValue(normalized, [
-    "Equipment #",
-    "Equipment Number",
-    "Equipment No",
-  ]),
-).trim();
-
-const makeModelYear = String(
-  getValue(normalized, [
-    "Make Model Year",
-    "Make, Model, Year",
-    "Make, Model,Year",
-    "Make/Model/Year",
-  ]),
-).trim();
-
-const description = String(
-  getValue(normalized, [
-    "Description",
-    "Equipment Description",
-  ]),
-).trim();
-
-const equipmentRate = Number(
-  getValue(normalized, [
-    "Udf Archa Rate",
-    "Archa Rate",
-    "Equipment Rate",
-    "Rate",
-  ]),
-);
-
-const horsePowerRaw = getValue(normalized, [
-  "Horsepower",
-  "Horse Power",
-  "HORSEPOWER",
-  "HP",
-]);
-
-const horsePower =
-  horsePowerRaw === ""
-    ? null
-    : Number(horsePowerRaw);
-
-console.log("PARSED EQUIPMENT:", {
-  equipmentNumber,
-  makeModelYear,
-  description,
-  equipmentRate,
-  horsePower,
-});
-
-  const spreadsheetRow = index + 2;
-
-  if (!equipmentNumber) {
-    throw new Error(
-      `Row ${spreadsheetRow}: Equipment # is required.`,
-    );
-  }
-
-  if (!description) {
-    throw new Error(
-      `Row ${spreadsheetRow}: Description is required.`,
-    );
-  }
-
-  if (
-    !Number.isFinite(equipmentRate) ||
-    equipmentRate < 0
-  ) {
-    throw new Error(
-      `Row ${spreadsheetRow}: Equipment rate is invalid.`,
-    );
-  }
-
-  if (
-    horsePower !== null &&
-    (!Number.isInteger(horsePower) ||
-      horsePower < 0)
-  ) {
-    throw new Error(
-      `Row ${spreadsheetRow}: Horse Power is invalid.`,
-    );
-  }
-
-  return {
-    equipmentNumber,
-    makeModelYear,
-    description,
-    equipmentRate,
-    horsePower,
-  };
-});
-
-await runInBatches(parsedRows, 50, async (batch) => {
-  await prisma.$transaction(
-    batch.map((row) =>
-      prisma.equipmentRate.upsert({
-        where: {
-          equipmentNumber: row.equipmentNumber,
-        },
-
-        update: {
-          makeModelYear: row.makeModelYear,
-          description: row.description,
-          equipmentRate: row.equipmentRate,
-          horsePower: row.horsePower,
-        },
-
-        create: {
-          equipmentNumber: row.equipmentNumber,
-          makeModelYear: row.makeModelYear,
-          description: row.description,
-          equipmentRate: row.equipmentRate,
-          horsePower: row.horsePower,
-        },
-      }),
-    ),
-  );
-});
-
-      return NextResponse.json({
-        message: `${parsedRows.length} equipment rates uploaded successfully.`,
-        uploadedCount: parsedRows.length,
-      });
+      throw error;
+    } finally {
+      client.release();
     }
 
-    // -----------------------------
-    // MATERIALS
-    // -----------------------------
-
-    if (category === "Materials") {
-      const rows =
-        XLSX.utils.sheet_to_json<MaterialSpreadsheetRow>(worksheet, {
-          defval: "",
-        });
-
-      if (rows.length === 0) {
-        return NextResponse.json(
-          { error: "The spreadsheet contains no material-rate rows." },
-          { status: 400 },
-        );
-      }
-
-      const parsedRows = rows.map((row, index) => {
-  const normalized = normalizeRow(
-    row as Record<string, unknown>,
-  );
-
-  const materialType = String(
-    getValue(normalized, [
-      "Description",
-      "Material",
-      "Material Description",
-      "Material Type",
-      "Type",
-    ]),
-  ).trim();
-
-  const materialUnit = String(
-    getValue(normalized, [
-      "Unit",
-      "Material Unit",
-      "UOM",
-      "Unit of Measure",
-    ]),
-  ).trim();
-
-  const spreadsheetRow = index + 2;
-
-  if (!materialType) {
-    throw new Error(
-      `Row ${spreadsheetRow}: Description is required.`,
-    );
-  }
-
-  if (!materialUnit) {
-    throw new Error(
-      `Row ${spreadsheetRow}: Unit is required.`,
-    );
-  }
-
-  return {
-    materialType,
-    materialUnit,
-  };
-});
-
-      await runInBatches(parsedRows, 100, async (batch) => {
-  await prisma.$transaction(
-    batch.map((row) =>
-      prisma.materialRate.upsert({
-        where: {
-          materialType_materialUnit: {
-            materialType: row.materialType,
-            materialUnit: row.materialUnit,
-          },
-        },
-        update: {},
-        create: {
-          materialType: row.materialType,
-          materialUnit: row.materialUnit,
-        },
-      }),
-    ),
-  );
-});
-
-      return NextResponse.json({
-        message: `${parsedRows.length} material rates uploaded successfully.`,
-        uploadedCount: parsedRows.length,
-      });
-    }
-
-    return NextResponse.json(
-      { error: "Unsupported category." },
-      { status: 400 },
-    );
+    const categoryName = category === "Materials" ? "material" : category.toLowerCase();
+    return NextResponse.json({
+      message: `${parsed.length} ${categoryName} rates uploaded successfully.`,
+      uploadedCount: parsed.length,
+    });
   } catch (error) {
-    console.error("Rate upload failed:", error);
-
-    return NextResponse.json(
-      {
-        error:
-          error instanceof Error
-            ? error.message
-            : "The spreadsheet could not be uploaded.",
-      },
-      { status: 500 },
-    );
+    if (error instanceof UploadValidationError)
+      return NextResponse.json({ error: error.message }, { status: 400 });
+    console.error("RATE UPLOAD ERROR:", error);
+    return NextResponse.json({ error: "The spreadsheet could not be uploaded." }, { status: 500 });
   }
 }

@@ -1,8 +1,16 @@
+
 import { NextResponse } from "next/server";
 import bcrypt from "bcryptjs";
 
-import { prisma } from "@/lib/prisma";
+import { pool } from "@/lib/db";
 import { createSession } from "@/lib/auth";
+
+export const runtime = "nodejs";
+
+interface LoginUser {
+  id: string;
+  password: string;
+}
 
 export async function POST(request: Request) {
   try {
@@ -12,26 +20,29 @@ export async function POST(request: Request) {
       .trim()
       .toLowerCase();
 
-    const password =
-      String(body.password ?? "");
+    const password = String(body.password ?? "");
 
     if (!email || !password) {
       return NextResponse.json(
         {
-          error:
-            "Email and password are required.",
+          error: "Email and password are required.",
         },
         {
           status: 400,
-        },
+        }
       );
     }
 
-    const user = await prisma.user.findUnique({
-      where: {
-        email,
-      },
-    });
+    // Find the user directly in PostgreSQL
+    const result = await pool.query<LoginUser>(
+      `SELECT "id", "password"
+       FROM "User"
+       WHERE "email" = $1
+       LIMIT 1`,
+      [email]
+    );
+
+    const user = result.rows[0];
 
     if (!user) {
       return NextResponse.json(
@@ -40,15 +51,15 @@ export async function POST(request: Request) {
         },
         {
           status: 401,
-        },
+        }
       );
     }
 
-    const passwordMatches =
-      await bcrypt.compare(
-        password,
-        user.password,
-      );
+    // Verify the existing bcrypt password hash
+    const passwordMatches = await bcrypt.compare(
+      password,
+      user.password
+    );
 
     if (!passwordMatches) {
       return NextResponse.json(
@@ -57,10 +68,11 @@ export async function POST(request: Request) {
         },
         {
           status: 401,
-        },
+        }
       );
     }
 
+    // Create the login session
     await createSession(user.id);
 
     return NextResponse.json({
@@ -75,7 +87,7 @@ export async function POST(request: Request) {
       },
       {
         status: 500,
-      },
+      }
     );
   }
 }

@@ -1,4 +1,7 @@
-import { prisma } from "./prisma";
+
+import "server-only";
+
+import { pool } from "./db";
 
 export type LabourRate = {
   id: string;
@@ -25,16 +28,30 @@ export type MaterialRate = {
   unit: string;
 };
 
+// Labour Rates
+export async function getLabourRates(): Promise<LabourRate[]> {
+  const result = await pool.query<{
+    id: string;
+    employeeNumber: number;
+    baseWorkClass: string;
+    baseClassName: string;
+    rate: string;
+    saturdayRate: string;
+    sundayRate: string;
+  }>(
+    `SELECT
+       "id",
+       "employeeNumber",
+       "baseWorkClass",
+       "baseClassName",
+       "rate",
+       "saturdayRate",
+       "sundayRate"
+     FROM "LabourRate"
+     ORDER BY "employeeNumber" ASC`
+  );
 
-
-
-export async function getLabourRates() {
-  const rates = await prisma.labourRate.findMany({
-    orderBy: {
-      employeeNumber: "asc",
-    },
-  });
-  return rates.map((rate) => ({
+  return result.rows.map((rate) => ({
     id: rate.id,
     employeeNumber: rate.employeeNumber,
     baseWorkClass: rate.baseWorkClass,
@@ -45,13 +62,28 @@ export async function getLabourRates() {
   }));
 }
 
-export async function getEquipmentRates() {
-  const rates = await prisma.equipmentRate.findMany({
-    orderBy: {
-      equipmentNumber: "asc",
-    },
-  });
-  return rates.map((rate) => ({
+// Equipment Rates
+export async function getEquipmentRates(): Promise<EquipmentRate[]> {
+  const result = await pool.query<{
+    id: string;
+    equipmentNumber: string;
+    description: string;
+    equipmentRate: string;
+    horsePower: number | null;
+    makeModelYear: string;
+  }>(
+    `SELECT
+       "id",
+       "equipmentNumber",
+       "description",
+       "equipmentRate",
+       "horsePower",
+       "makeModelYear"
+     FROM "EquipmentRate"
+     ORDER BY "equipmentNumber" ASC`
+  );
+
+  return result.rows.map((rate) => ({
     id: rate.id,
     equipmentNumber: rate.equipmentNumber,
     description: rate.description,
@@ -61,13 +93,22 @@ export async function getEquipmentRates() {
   }));
 }
 
-export async function getMaterialRates() {
-  const rates = await prisma.materialRate.findMany({
-    orderBy: {
-      materialType: "asc",
-    },
-  });
-  return rates.map((rate) => ({
+// Material Rates
+export async function getMaterialRates(): Promise<MaterialRate[]> {
+  const result = await pool.query<{
+    id: string;
+    materialType: string;
+    materialUnit: string;
+  }>(
+    `SELECT
+       "id",
+       "materialType",
+       "materialUnit"
+     FROM "MaterialRate"
+     ORDER BY "materialType" ASC`
+  );
+
+  return result.rows.map((rate) => ({
     id: rate.id,
     type: rate.materialType,
     unit: rate.materialUnit,

@@ -43,3 +43,11 @@ yarn-error.log*
 next-env.d.ts
 
 /app/generated/prisma
+
+# Local EWR attachment storage
+/ewr-uploads/
+/uploads/
+
+# Local PostgreSQL backups
+*.dump
+*.backup

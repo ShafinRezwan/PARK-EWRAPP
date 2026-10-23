@@ -1,5 +1,7 @@
-import { prisma } from "./prisma";
 
+import "server-only";
+
+import { pool } from "./db";
 
 export type Job = {
   id: string;
@@ -11,23 +13,19 @@ export type Job = {
   recipient: string | null;
 };
 
+export async function getJobs(): Promise<Job[]> {
+  const result = await pool.query<Job>(
+    `SELECT
+       "id",
+       "jobNumber",
+       "jobName",
+       "address",
+       "division",
+       "year",
+       "recipient"
+     FROM "Job"
+     ORDER BY "jobNumber" ASC`
+  );
 
-export async function getJobs(){
-
-    const jobs = await prisma.job.findMany({
-    orderBy: {
-      jobNumber: "asc",
-    },
-  });
-   
-    return jobs.map((job) => ({
-    id: job.id,
-    jobNumber: job.jobNumber,
-    jobName: job.jobName,
-    address: job.address,
-    division: job.division,
-    year: job.year,
-    recipient: job.recipient,
-
-  }));
+  return result.rows;
 }

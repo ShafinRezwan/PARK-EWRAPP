@@ -1,5 +1,10 @@
+
 import { NextResponse } from "next/server";
-import { prisma } from "@/lib/prisma";
+
+import { pool } from "@/lib/db";
+import { getCurrentUser } from "@/lib/auth";
+
+export const runtime = "nodejs";
 
 type Props = {
   params: Promise<{
@@ -7,200 +12,275 @@ type Props = {
   }>;
 };
 
+type JobRow = {
+  id: string;
+  jobNumber: string;
+  jobName: string;
+  address: string | null;
+  recipient: string | null;
+  division: string;
+  year: number;
+  createdAt: Date;
+  updatedAt: Date;
+};
+
+type PgError = {
+  code?: string;
+  constraint?: string;
+};
+
+// -----------------------------------------
+// DELETE JOB
+// -----------------------------------------
+
 export async function DELETE(
   request: Request,
-  { params }: Props,
+  { params }: Props
 ) {
+  const user = await getCurrentUser();
+
+  if (!user) {
+    return NextResponse.json(
+      { error: "Unauthorized." },
+      { status: 401 }
+    );
+  }
+
+  // Temporary role policy; confirm before deployment.
+  if (!["ADMIN", "CONTRACTS", "MASTER_USER"].includes(user.role)) {
+    return NextResponse.json(
+      { error: "Forbidden." },
+      { status: 403 }
+    );
+  }
+
+  const { id } = await params;
+  const client = await pool.connect();
+
   try {
-    const { id } = await params;
+    await client.query("BEGIN");
 
-    const job = await prisma.job.findUnique({
-      where: {
-        id,
-      },
+    // Lock the job to prevent concurrent modifications.
+    const jobResult = await client.query<JobRow>(
+      `SELECT *
+       FROM "Job"
+       WHERE "id" = $1
+       FOR UPDATE`,
+      [id]
+    );
 
-      include: {
-        _count: {
-          select: {
-            extraWorkReports: true,
-          },
-        },
-      },
-    });
+    const job = jobResult.rows[0];
 
     if (!job) {
+      await client.query("ROLLBACK");
+
       return NextResponse.json(
-        {
-          error: "Job could not be found.",
-        },
-        {
-          status: 404,
-        },
+        { error: "Job could not be found." },
+        { status: 404 }
       );
     }
 
-    if (job._count.extraWorkReports > 0) {
+    // Check for associated work reports.
+    const countResult = await client.query<{
+      count: string;
+    }>(
+      `SELECT COUNT(*) AS count
+       FROM "ExtraWorkReport"
+       WHERE "jobId" = $1`,
+      [id]
+    );
+
+    const reportCount = Number(
+      countResult.rows[0].count
+    );
+
+    if (reportCount > 0) {
+      await client.query("ROLLBACK");
+
       return NextResponse.json(
         {
           error:
-            `Job ${job.jobNumber} cannot be deleted because it has ${job._count.extraWorkReports} work report(s).`,
+            `Job ${job.jobNumber} cannot be deleted because it has ${reportCount} work report(s).`,
         },
-        {
-          status: 409,
-        },
+        { status: 409 }
       );
     }
 
-    await prisma.job.delete({
-      where: {
-        id,
-      },
-    });
+    // Delete the job.
+    // PostgreSQL foreign keys protect related records.
+    await client.query(
+      `DELETE FROM "Job"
+       WHERE "id" = $1`,
+      [id]
+    );
+
+    await client.query("COMMIT");
 
     return NextResponse.json({
       message:
         `Job ${job.jobNumber} deleted successfully.`,
     });
   } catch (error) {
+    await client.query("ROLLBACK");
+
+    const pgError = error as PgError;
+
+    if (pgError.code === "23503") {
+      return NextResponse.json(
+        {
+          error:
+            "This job cannot be deleted because related records still reference it.",
+        },
+        { status: 409 }
+      );
+    }
+
     console.error("DELETE JOB ERROR:", error);
 
     return NextResponse.json(
-      {
-        error:
-          error instanceof Error
-            ? error.message
-            : "Unable to delete job.",
-      },
-      {
-        status: 500,
-      },
+      { error: "Unable to delete job." },
+      { status: 500 }
     );
+  } finally {
+    client.release();
   }
 }
 
+// -----------------------------------------
+// UPDATE JOB
+// -----------------------------------------
+
 export async function PUT(
   request: Request,
-  { params }: Props,
+  { params }: Props
 ) {
   try {
-    const { id } = await params;
+    const user = await getCurrentUser();
 
+    if (!user) {
+      return NextResponse.json(
+        { error: "Unauthorized." },
+        { status: 401 }
+      );
+    }
+
+    // Temporary role policy; confirm before deployment.
+    if (!["ADMIN", "CONTRACTS", "MASTER_USER"].includes(user.role)) {
+      return NextResponse.json(
+        { error: "Forbidden." },
+        { status: 403 }
+      );
+    }
+
+    const { id } = await params;
     const body = await request.json();
 
-    const {
-      jobNumber,
-      jobName,
-      address,
-      recipient,
-      division,
-      year,
-    } = body;
+    const jobNumber = String(
+      body.jobNumber ?? ""
+    ).trim();
+
+    const jobName = String(
+      body.jobName ?? ""
+    ).trim();
+
+    const address = String(
+      body.address ?? ""
+    ).trim();
+
+    const recipient = String(
+      body.recipient ?? ""
+    ).trim();
+
+    const division = String(
+      body.division ?? ""
+    ).trim();
+
+    const year = Number(body.year);
 
     // -----------------------------------------
     // Validation
     // -----------------------------------------
 
-    if (!jobNumber?.trim()) {
+    if (!jobNumber) {
       return NextResponse.json(
-        {
-          error: "Job number is required.",
-        },
-        {
-          status: 400,
-        },
+        { error: "Job number is required." },
+        { status: 400 }
       );
     }
 
-    if (!jobName?.trim()) {
+    if (!jobName) {
       return NextResponse.json(
-        {
-          error: "Job name is required.",
-        },
-        {
-          status: 400,
-        },
+        { error: "Job name is required." },
+        { status: 400 }
       );
     }
 
-    if (!address?.trim()) {
+    if (!address) {
       return NextResponse.json(
-        {
-          error: "Address is required.",
-        },
-        {
-          status: 400,
-        },
+        { error: "Address is required." },
+        { status: 400 }
       );
     }
 
     if (!division) {
       return NextResponse.json(
-        {
-          error: "Division is required.",
-        },
-        {
-          status: 400,
-        },
+        { error: "Division is required." },
+        { status: 400 }
       );
     }
 
-    if (!year) {
+    if (
+      body.year == null ||
+      body.year === "" ||
+      !Number.isInteger(year) ||
+      year < 1900 ||
+      year > 9999
+    ) {
       return NextResponse.json(
-        {
-          error: "Year is required.",
-        },
-        {
-          status: 400,
-        },
-      );
-    }
-
-    // -----------------------------------------
-    // Make sure job exists
-    // -----------------------------------------
-
-    const existingJob =
-      await prisma.job.findUnique({
-        where: {
-          id,
-        },
-      });
-
-    if (!existingJob) {
-      return NextResponse.json(
-        {
-          error: "Job could not be found.",
-        },
-        {
-          status: 404,
-        },
+        { error: "A valid year is required." },
+        { status: 400 }
       );
     }
 
     // -----------------------------------------
-    // Prevent duplicate Job # + Year
+    // Check for existing job
     // -----------------------------------------
 
-    const duplicateJob =
-      await prisma.job.findFirst({
-        where: {
-          jobNumber: jobNumber.trim(),
-          year: Number(year),
+    const existingResult = await pool.query(
+      `SELECT "id"
+       FROM "Job"
+       WHERE "id" = $1`,
+      [id]
+    );
 
-          id: {
-            not: id,
-          },
-        },
-      });
+    if (existingResult.rows.length === 0) {
+      return NextResponse.json(
+        { error: "Job could not be found." },
+        { status: 404 }
+      );
+    }
 
-    if (duplicateJob) {
+    // -----------------------------------------
+    // Prevent duplicate job number/year
+    // -----------------------------------------
+
+    const duplicateResult = await pool.query(
+      `SELECT "id"
+       FROM "Job"
+       WHERE "jobNumber" = $1
+         AND "year" = $2
+         AND "id" <> $3
+       LIMIT 1`,
+      [jobNumber, year, id]
+    );
+
+    if (duplicateResult.rows.length > 0) {
       return NextResponse.json(
         {
-          error: `Job ${jobNumber} already exists for ${year}.`,
+          error:
+            `Job ${jobNumber} already exists for ${year}.`,
         },
-        {
-          status: 409,
-        },
+        { status: 409 }
       );
     }
 
@@ -208,51 +288,61 @@ export async function PUT(
     // Update job
     // -----------------------------------------
 
-    const updatedJob =
-      await prisma.job.update({
-        where: {
-          id,
-        },
+    const result = await pool.query<JobRow>(
+      `UPDATE "Job"
+       SET
+         "jobNumber" = $1,
+         "jobName" = $2,
+         "address" = $3,
+         "recipient" = $4,
+         "division" = $5,
+         "year" = $6,
+         "updatedAt" = NOW()
+       WHERE "id" = $7
+       RETURNING *`,
+      [
+        jobNumber,
+        jobName,
+        address,
+        recipient || null,
+        division,
+        year,
+        id,
+      ]
+    );
 
-        data: {
-          jobNumber: jobNumber.trim(),
-          jobName: jobName.trim(),
-          address: address.trim(),
+    const updatedJob = result.rows[0];
 
-          recipient:
-            recipient?.trim() || null,
-
-          division,
-          year: Number(year),
-        },
-      });
-
-    // -----------------------------------------
-    // Success
-    // -----------------------------------------
+    if (!updatedJob) {
+      return NextResponse.json(
+        { error: "Job could not be found." },
+        { status: 404 }
+      );
+    }
 
     return NextResponse.json({
       message:
         `Job ${updatedJob.jobNumber} updated successfully.`,
-
       job: updatedJob,
     });
   } catch (error) {
-    console.error(
-      "UPDATE JOB ERROR:",
-      error,
-    );
+    const pgError = error as PgError;
+
+    if (pgError.code === "23505") {
+      return NextResponse.json(
+        {
+          error:
+            "A job with this number already exists for that year.",
+        },
+        { status: 409 }
+      );
+    }
+
+    console.error("UPDATE JOB ERROR:", error);
 
     return NextResponse.json(
-      {
-        error:
-          error instanceof Error
-            ? error.message
-            : "Unable to update job.",
-      },
-      {
-        status: 500,
-      },
+      { error: "Unable to update job." },
+      { status: 500 }
     );
   }
 }

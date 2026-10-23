@@ -1,8 +1,7 @@
-// app/api/ewr/route.ts
-
+// Replace app/api/ewr/route.ts with this file.
+import { randomUUID } from "node:crypto";
 import { NextResponse } from "next/server";
-import { prisma } from "@/lib/prisma";
-
+import { pool } from "@/lib/db";
 import type {
   LabourFormRow,
   EquipmentFormRow,
@@ -13,11 +12,7 @@ import type {
 
 export const runtime = "nodejs";
 
-// We don't send invoiceAttachment through JSON
-type InvoiceSaveRow = Omit<
-  InvoiceFormRow,
-  "invoiceAttachment"
-> & {
+type InvoiceSaveRow = Omit<InvoiceFormRow, "invoiceAttachment"> & {
   hasAttachment?: boolean;
 };
 
@@ -29,27 +24,34 @@ type CreateEWRBody = {
   description?: string;
   address?: string;
   ewrNumber?: string;
-
   labour?: LabourFormRow[];
   equipment?: EquipmentFormRow[];
   materials?: MaterialFormRow[];
   invoices?: InvoiceSaveRow[];
-
   invoiceMarkups?: InvoiceMarkupRow[];
 };
 
+type SavedInvoice = { id: string; name: string };
+type SavedMarkup = { id: string; name: string; markup: string };
+
+function badRequest(error: string, status = 400) {
+  return NextResponse.json({ error }, { status });
+}
+
+function numeric(value: unknown): number {
+  const result = Number(value);
+  return Number.isFinite(result) ? result : 0;
+}
+
 export async function POST(request: Request) {
+  let client;
+  let transactionStarted = false;
+
   try {
-    // -----------------------------------------
-    // Get request data
-    // -----------------------------------------
-
-    const body =
-      (await request.json()) as CreateEWRBody;
-
+    const body = (await request.json()) as CreateEWRBody;
     const {
-      jobNumber,
       jobId,
+      jobNumber,
       ewrNumber,
       recipient,
       address,
@@ -62,453 +64,200 @@ export async function POST(request: Request) {
       invoiceMarkups = [],
     } = body;
 
-    console.log("EWR BODY RECEIVED:", body);
-
-    // -----------------------------------------
-    // Validation
-    // -----------------------------------------
-
-    if (!jobId?.trim()) {
-      return NextResponse.json(
-        {
-          error: "Job is required.",
-        },
-        {
-          status: 400,
-        },
-      );
+    if (typeof jobId !== "string" || !jobId.trim()) {
+      return badRequest("Job is required.");
     }
-
-    if (!date) {
-      return NextResponse.json(
-        {
-          error: "Work date is required.",
-        },
-        {
-          status: 400,
-        },
-      );
+    if (typeof date !== "string" || !/^\d{4}-\d{2}-\d{2}$/.test(date)) {
+      return badRequest("A valid work date is required (YYYY-MM-DD).");
     }
-
-    // -----------------------------------------
-    // Find job
-    // -----------------------------------------
-
-    const job = await prisma.job.findUnique({
-      where: {
-        id: jobId,
-      },
-    });
-
-    if (!job) {
-      return NextResponse.json(
-        {
-          error: `Job ${jobNumber} could not be found.`,
-        },
-        {
-          status: 404,
-        },
-      );
+    const parsedDate = new Date(`${date}T00:00:00`);
+    if (Number.isNaN(parsedDate.getTime()) || parsedDate.getFullYear() !== Number(date.slice(0, 4)) || parsedDate.getMonth() + 1 !== Number(date.slice(5, 7)) || parsedDate.getDate() !== Number(date.slice(8, 10))) {
+      return badRequest("Work date is invalid.");
     }
-
-    // -----------------------------------------
-    // Generate EWR number for THIS job
-    // -----------------------------------------
-
-    const reportsForJob =
-      await prisma.extraWorkReport.findMany({
-        where: {
-          jobId: job.id,
-        },
-
-        select: {
-          ewrNumber: true,
-        },
-      });
-
-    const usedNumbers = reportsForJob
-      .map((report) =>
-        Number(report.ewrNumber),
-      )
-      .filter((number) =>
-        Number.isFinite(number),
-      );
-
-    const nextEwrNumber =
-      usedNumbers.length === 0
-        ? 9801
-        : Math.max(...usedNumbers) + 1;
-
-    const finalEwrNumber =
-      ewrNumber?.trim() ||
-      String(nextEwrNumber);
-
-    // -----------------------------------------
-    // Validate EWR number
-    // -----------------------------------------
-
-    const numericEwrNumber =
-      Number(finalEwrNumber);
-
-    if (
-      !Number.isInteger(numericEwrNumber) ||
-      numericEwrNumber < 9801
-    ) {
-      return NextResponse.json(
-        {
-          error:
-            "EWR number must be 9801 or greater.",
-        },
-        {
-          status: 400,
-        },
-      );
+    if (![labour, equipment, materials, invoices, invoiceMarkups].every(Array.isArray)) {
+      return badRequest("Invalid EWR row data.");
     }
-
-    // -----------------------------------------
-    // Duplicate EWR check
-    // -----------------------------------------
-
-    const duplicateReport =
-      await prisma.extraWorkReport.findFirst({
-        where: {
-          jobId: job.id,
-          ewrNumber: finalEwrNumber,
-        },
-      });
-
-    if (duplicateReport) {
-      return NextResponse.json(
-        {
-          error: `EWR #${finalEwrNumber} already exists for Job ${job.jobNumber}.`,
-        },
-        {
-          status: 409,
-        },
-      );
-    }
-
-    // -----------------------------------------
-    // Labour
-    // -----------------------------------------
 
     const labourRows = labour
-      .filter((row) => {
-        return (
-          row.classification.trim() !== "" ||
-          row.hours !== "" ||
-          row.rate !== ""
-        );
-      })
-      .map((row) => {
-        const hours =
-          Number(row.hours) || 0;
-
-        const rate =
-          Number(row.rate) || 0;
-
-        return {
-          classification:
-            row.classification.trim(),
-
-          hours,
-          rate,
-
-          amount:
-            hours * rate,
-        };
-      });
-
-    // -----------------------------------------
-    // Equipment
-    // -----------------------------------------
+      .filter((row) => row.classification.trim() !== "" || row.hours !== "" || row.rate !== "")
+      .map((row) => ({
+        classification: row.classification.trim(),
+        hours: numeric(row.hours),
+        rate: numeric(row.rate),
+        amount: numeric(row.hours) * numeric(row.rate),
+      }));
 
     const equipmentRows = equipment
-      .filter((row) => {
-        return (
-          row.name.trim() !== "" ||
-          row.unitNumber.trim() !== "" ||
-          row.hours !== "" ||
-          row.rate !== ""
-        );
-      })
-      .map((row) => {
-        const hours =
-          Number(row.hours) || 0;
-
-        const rate =
-          Number(row.rate) || 0;
-
-        return {
-          name:
-            row.name.trim(),
-
-          unitNumber:
-            row.unitNumber.trim(),
-
-          hours,
-          rate,
-
-          amount:
-            hours * rate,
-        };
-      });
-
-    // -----------------------------------------
-    // Materials
-    // -----------------------------------------
+      .filter((row) => row.name.trim() !== "" || row.unitNumber.trim() !== "" || row.hours !== "" || row.rate !== "")
+      .map((row) => ({
+        name: row.name.trim(),
+        unitNumber: row.unitNumber.trim(),
+        hours: numeric(row.hours),
+        rate: numeric(row.rate),
+        amount: numeric(row.hours) * numeric(row.rate),
+      }));
 
     const materialRows = materials
-      .filter((row) => {
-        return (
-          row.name.trim() !== "" ||
-          row.unit.trim() !== "" ||
-          row.quantity !== "" ||
-          row.price !== ""
-        );
-      })
-      .map((row) => {
-        const quantity =
-          Number(row.quantity) || 0;
-
-        const price =
-          Number(row.price) || 0;
-
-        return {
-          name:
-            row.name.trim(),
-
-          unit:
-            row.unit.trim(),
-
-          quantity,
-          price,
-
-          amount:
-            quantity * price,
-        };
-      });
-
-    // -----------------------------------------
-    // Invoices
-    // -----------------------------------------
-
-   const invoiceRows = invoices
-    .filter((row) => {
-      return (
-        row.name.trim() !== "" ||
-        row.cost !== "" ||
-        row.hasAttachment === true
-      );
-    })
-    .map((row) => {
-      return {
-        id: row.id,
+      .filter((row) => row.name.trim() !== "" || row.unit.trim() !== "" || row.quantity !== "" || row.price !== "")
+      .map((row) => ({
         name: row.name.trim(),
-        cost: Number(row.cost) || 0,
-      };
-    });
+        unit: row.unit.trim(),
+        quantity: numeric(row.quantity),
+        price: numeric(row.price),
+        amount: numeric(row.quantity) * numeric(row.price),
+      }));
 
-    // -----------------------------------------
-    // Invoice markups
-    // -----------------------------------------
+    const invoiceRows = invoices
+      .filter((row) => row.name.trim() !== "" || row.cost !== "" || row.hasAttachment === true)
+      .map((row) => ({
+        id: row.id || randomUUID(),
+        name: row.name.trim(),
+        cost: numeric(row.cost),
+      }));
 
-    const invoiceMarkupRows =
-      invoiceMarkups
-        .filter((row) => {
-          return (
-            row.name.trim() !== "" ||
-            row.markup !== ""
-          );
-        })
-        .map((row) => {
-          return {
-            id: row.id,
+    const markupRows = invoiceMarkups
+      .filter((row) => row.name.trim() !== "" || row.markup !== "")
+      .map((row) => ({
+        id: row.id || randomUUID(),
+        name: row.name.trim(),
+        markup: numeric(row.markup),
+      }));
 
-            name:
-              row.name.trim(),
+    client = await pool.connect();
+    await client.query("BEGIN");
+    transactionStarted = true;
 
-            markup:
-              Number(row.markup) || 0,
-          };
-        });
+    // Serializes EWR creation for the same job, preventing concurrent auto-number collisions.
+    const jobResult = await client.query<{ id: string; jobNumber: string }>(
+      'SELECT "id", "jobNumber" FROM "Job" WHERE "id" = $1 FOR UPDATE',
+      [jobId.trim()],
+    );
+    const job = jobResult.rows[0];
+    if (!job) {
+      await client.query("ROLLBACK");
+      transactionStarted = false;
+      return badRequest(`Job ${jobNumber ?? ""} could not be found.`, 404);
+    }
 
-    // -----------------------------------------
-    // Debugging
-    // -----------------------------------------
+    const numberResult = await client.query<{ ewrNumber: string }>(
+      'SELECT "ewrNumber" FROM "ExtraWorkReport" WHERE "jobId" = $1',
+      [job.id],
+    );
+    const usedNumbers = numberResult.rows
+      .map((row) => Number(row.ewrNumber))
+      .filter((number) => Number.isFinite(number));
+    const nextNumber = usedNumbers.length ? Math.max(...usedNumbers) + 1 : 9801;
+    const finalEwrNumber = ewrNumber?.trim() || String(nextNumber);
+    const parsedNumber = Number(finalEwrNumber);
+    if (!Number.isInteger(parsedNumber) || parsedNumber < 9801) {
+      await client.query("ROLLBACK");
+      transactionStarted = false;
+      return badRequest("EWR number must be 9801 or greater.");
+    }
 
-    console.log(
-      "LABOUR TO SAVE:",
-      labourRows,
+    const duplicate = await client.query(
+      'SELECT 1 FROM "ExtraWorkReport" WHERE "jobId" = $1 AND "ewrNumber" = $2 LIMIT 1',
+      [job.id, finalEwrNumber],
+    );
+    if (duplicate.rowCount) {
+      await client.query("ROLLBACK");
+      transactionStarted = false;
+      return badRequest(`EWR #${finalEwrNumber} already exists for Job ${job.jobNumber}.`, 409);
+    }
+
+    const reportId = randomUUID();
+    const savedReport = await client.query<{
+      id: string;
+      ewrNumber: string;
+      recipient: string | null;
+      workDate: Date;
+      description: string;
+      address: string | null;
+      status: string;
+    }>(
+      `INSERT INTO "ExtraWorkReport"
+        ("id", "ewrNumber", "workDate", "jobId", "recipient", "address", "description", "status")
+       VALUES ($1, $2, $3, $4, $5, $6, $7, 'DRAFT'::"ReportStatus")
+       RETURNING "id", "ewrNumber", "recipient", "workDate", "description", "address", "status"`,
+      [reportId, finalEwrNumber, parsedDate, job.id, recipient?.trim() || null, address?.trim() || null, description?.trim() ?? ""],
     );
 
-    console.log(
-      "EQUIPMENT TO SAVE:",
-      equipmentRows,
-    );
+    for (const row of labourRows) {
+      await client.query(
+        `INSERT INTO "EWRLabourRow"
+          ("id", "classification", "hours", "rate", "amount", "reportId")
+         VALUES ($1, $2, $3, $4, $5, $6)`,
+        [randomUUID(), row.classification, row.hours, row.rate, row.amount, reportId],
+      );
+    }
+    for (const row of equipmentRows) {
+      await client.query(
+        `INSERT INTO "EWREquipmentRow"
+          ("id", "name", "unitNumber", "hours", "rate", "amount", "reportId")
+         VALUES ($1, $2, $3, $4, $5, $6, $7)`,
+        [randomUUID(), row.name, row.unitNumber, row.hours, row.rate, row.amount, reportId],
+      );
+    }
+    for (const row of materialRows) {
+      await client.query(
+        `INSERT INTO "EWRMaterialRow"
+          ("id", "name", "unit", "quantity", "price", "amount", "reportId")
+         VALUES ($1, $2, $3, $4, $5, $6, $7)`,
+        [randomUUID(), row.name, row.unit, row.quantity, row.price, row.amount, reportId],
+      );
+    }
 
-    console.log(
-      "MATERIALS TO SAVE:",
-      materialRows,
-    );
+    const savedInvoices: SavedInvoice[] = [];
+    for (const row of invoiceRows) {
+      const result = await client.query<SavedInvoice>(
+        `INSERT INTO "EWRInvoiceRow" ("id", "name", "cost", "reportId")
+         VALUES ($1, $2, $3, $4) RETURNING "id", "name"`,
+        [row.id, row.name, row.cost, reportId],
+      );
+      savedInvoices.push(result.rows[0]);
+    }
 
-    console.log(
-      "INVOICES TO SAVE:",
-      invoiceRows,
-    );
+    const savedMarkups: SavedMarkup[] = [];
+    for (const row of markupRows) {
+      const result = await client.query<SavedMarkup>(
+        `INSERT INTO "EWRInvoiceMarkupRow" ("id", "name", "markup", "reportId")
+         VALUES ($1, $2, $3, $4) RETURNING "id", "name", "markup"`,
+        [row.id, row.name, row.markup, reportId],
+      );
+      savedMarkups.push(result.rows[0]);
+    }
 
-    console.log(
-      "INVOICE MARKUPS TO SAVE:",
-      invoiceMarkupRows,
-    );
-
-    // -----------------------------------------
-    // Create EWR
-    // -----------------------------------------
-
-    const report =
-      await prisma.extraWorkReport.create({
-        data: {
-          ewrNumber:
-            finalEwrNumber,
-
-          workDate:
-            new Date(
-              `${date}T00:00:00`,
-            ),
-
-          recipient:
-            recipient &&
-            recipient.trim() !== ""
-              ? recipient.trim()
-              : null,
-
-          address:
-            address?.trim() || null,
-
-          description:
-            description?.trim() ?? "",
-
-          status: "DRAFT",
-
-          job: {
-            connect: {
-              id: job.id,
-            },
-          },
-
-          labourEntries: {
-            create: labourRows,
-          },
-
-          equipmentEntries: {
-            create: equipmentRows,
-          },
-
-          materialEntries: {
-            create: materialRows,
-          },
-
-          invoices: {
-            create: invoiceRows,
-          },
-
-          invoiceMarkups: {
-            create:
-              invoiceMarkupRows,
-          },
-        },
-
-        include: {
-          invoices: true,
-          invoiceMarkups: true,
-        },
-      });
-
-    console.log(
-      "EWR SAVED:",
-      report.id,
-    );
-
-    // -----------------------------------------
-    // Success
-    // -----------------------------------------
+    await client.query("COMMIT");
+    transactionStarted = false;
+    const report = savedReport.rows[0];
 
     return NextResponse.json(
       {
-        message:
-          `EWR ${report.ewrNumber} saved successfully.`,
-
+        message: `EWR ${report.ewrNumber} saved successfully.`,
         report: {
-          id:
-            report.id,
-
-          ewrNumber:
-            report.ewrNumber,
-
-          recipient:
-            report.recipient,
-
-          workDate:
-            report.workDate,
-
-          description:
-            report.description,
-
-          address:
-            report.address,
-
-          status:
-            report.status,
-
-          invoices:
-            report.invoices.map(
-              (invoice) => ({
-                id:
-                  invoice.id,
-
-                name:
-                  invoice.name,
-              }),
-            ),
-
-          invoiceMarkups:
-            report.invoiceMarkups.map(
-              (markup) => ({
-                id:
-                  markup.id,
-
-                name:
-                  markup.name,
-
-                markup:
-                  String(
-                    markup.markup,
-                  ),
-              }),
-            ),
+          ...report,
+          invoices: savedInvoices,
+          invoiceMarkups: savedMarkups.map((row) => ({
+            id: row.id,
+            name: row.name,
+            markup: String(row.markup),
+          })),
         },
       },
-      {
-        status: 201,
-      },
+      { status: 201 },
     );
   } catch (error) {
-    console.error(
-      "SAVE EWR ERROR:",
-      error,
-    );
-
-    return NextResponse.json(
-      {
-        error:
-          error instanceof Error
-            ? error.message
-            : "Unable to save the EWR.",
-      },
-      {
-        status: 500,
-      },
-    );
+    if (client && transactionStarted) {
+      try { await client.query("ROLLBACK"); } catch (rollbackError) {
+        console.error("EWR rollback failed:", rollbackError);
+      }
+    }
+    console.error("SAVE EWR ERROR:", error);
+    if (typeof error === "object" && error !== null && "code" in error && error.code === "23505") {
+      return badRequest("An EWR with this number already exists for the selected job.", 409);
+    }
+    return NextResponse.json({ error: "Unable to save the EWR." }, { status: 500 });
+  } finally {
+    client?.release();
   }
 }
