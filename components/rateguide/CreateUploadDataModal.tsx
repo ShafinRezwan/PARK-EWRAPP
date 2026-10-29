@@ -1,15 +1,18 @@
 "use client";
 
 import { FormEvent, useRef, useState } from "react";
-import { useRouter } from "next/navigation";
 
 type Props = {
   onClose: () => void;
+  onUploadSuccess: (category: string, count: number) => void;
   category: "Labour" | "Equipment" | "Materials" | "Archa Rates";
 };
 
-export default function CreateUploadDataModal({ onClose, category }: Props) {
-  const router = useRouter();
+export default function CreateUploadDataModal({
+  onClose,
+  category,
+  onUploadSuccess,
+}: Props) {
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
@@ -25,7 +28,7 @@ export default function CreateUploadDataModal({ onClose, category }: Props) {
     }
 
     setIsUploading(true);
-    setStatus("Uploading...");
+    setStatus("");
 
     try {
       const formData = new FormData();
@@ -44,13 +47,13 @@ export default function CreateUploadDataModal({ onClose, category }: Props) {
         throw new Error(result.error ?? "Upload failed.");
       }
 
-      setStatus(result.message);
+      const uploadedCount = Number(result.uploadedCount);
 
-      router.refresh();
-
-      setTimeout(() => {
-        onClose();
-      }, 700);
+      // Close the upload modal and show the success popup.
+      onUploadSuccess(
+        category,
+        Number.isFinite(uploadedCount) ? uploadedCount : 0,
+      );
     } catch (error) {
       setStatus(
         error instanceof Error
@@ -86,23 +89,40 @@ export default function CreateUploadDataModal({ onClose, category }: Props) {
 
       <button
         type="button"
+        disabled={isUploading}
         onClick={() => fileInputRef.current?.click()}
-        className="mt-8 w-full rounded-md border-[3px] border-black px-4 py-4 text-xl"
+        className="mt-8 w-full rounded-md border-[4px] border-black px-4 py-4 text-xl disabled:opacity-50 cursor-pointer"
       >
         {selectedFile?.name ?? "Choose File"}
       </button>
 
       {status && (
-        <p className="mt-3 text-center text-sm text-park-gray">{status}</p>
+        <p
+          role="alert"
+          className="mt-3 text-center text-lg font-bold text-red-600"
+        >
+          {status}
+        </p>
       )}
 
-      <button
-        type="submit"
-        disabled={!selectedFile || isUploading}
-        className="mt-8 w-full rounded-md bg-park-green px-6 py-3 text-2xl text-white disabled:cursor-not-allowed disabled:opacity-50"
-      >
-        {isUploading ? "Uploading..." : "Submit"}
-      </button>
+      <div className="mt-8 flex gap-3">
+        <button
+          type="button"
+          onClick={onClose}
+          disabled={isUploading}
+          className="flex-1 rounded-md bg-red-600 px-6 py-3 text-xl text-white font-semibold disabled:opacity-50 cursor-pointer"
+        >
+          Cancel
+        </button>
+
+        <button
+          type="submit"
+          disabled={!selectedFile || isUploading}
+          className="flex-1 rounded-md bg-park-green px-6 py-3 text-xl text-white disabled:cursor-not-allowed disabled:opacity-50 cursor-pointer"
+        >
+          {isUploading ? "Uploading..." : "Submit"}
+        </button>
+      </div>
     </form>
   );
 }

@@ -206,8 +206,6 @@ async function main() {
 
 main().catch((error) => {
   console.error("\nUnable to create user:");
-  console.error(
-    error instanceof Error ? error.message : error
-  );
+  console.error(error);
   process.exitCode = 1;
 });

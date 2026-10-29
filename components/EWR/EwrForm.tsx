@@ -4,7 +4,9 @@ import {
   type Dispatch,
   type SetStateAction,
   type ReactNode,
+  type KeyboardEvent,
   useState,
+  useRef,
 } from "react";
 
 import { CalendarIcon } from "lucide-react";
@@ -55,6 +57,22 @@ type FieldProps = {
   children: ReactNode;
   className?: string;
 };
+
+// Parse the EWR date as a calendar date, not a UTC timestamp.
+// YYYY-MM-DD is used by the form's date picker.
+function getLabourRateForDate(worker: LabourRate, date: string): number {
+  const [year, month, day] = date.split("-").map(Number);
+  if (!year || !month || !day) return Number(worker.rate);
+  const weekday = new Date(year, month - 1, day).getDay();
+  // The rate API must include these two fields in LabourRate.
+  const rates = worker as LabourRate & {
+    saturdayRate?: number | string;
+    sundayRate?: number | string;
+  };
+  if (weekday === 6) return Number(rates.saturdayRate ?? worker.rate);
+  if (weekday === 0) return Number(rates.sundayRate ?? worker.rate);
+  return Number(worker.rate);
+}
 
 const createId = () => crypto.randomUUID();
 
@@ -153,6 +171,25 @@ export default function EWRForm({
     setFormData((current) => ({
       ...current,
       [field]: value,
+    }));
+  };
+
+  const updateEwrDate = (date: string) => {
+    setFormData((current) => ({
+      ...current,
+      date,
+      labour: current.labour.map((row) => {
+        // Only update classifications with a unique matching rate record.
+        // Free-text rows and ambiguous classifications retain their current rate.
+        const candidates = labourRates.filter(
+          (worker) => worker.baseClassName === row.classification,
+        );
+        if (candidates.length !== 1) return row;
+        return {
+          ...row,
+          rate: getLabourRateForDate(candidates[0], date).toString(),
+        };
+      }),
     }));
   };
 
@@ -293,6 +330,84 @@ export default function EWRForm({
   const [openMaterialDropdown, setOpenMaterialDropdown] = useState<
     string | null
   >(null);
+
+  const [highlightedOption, setHighlightedOption] = useState(0);
+  const formRef = useRef<HTMLFormElement>(null);
+  const tabHeld = useRef(false);
+
+  // Holding Tab while pressing an arrow moves focus spatially between fields.
+  // A normal Tab press still uses the browser's standard focus order.
+  const moveFocusInDirection = (
+    direction: "ArrowUp" | "ArrowDown" | "ArrowLeft" | "ArrowRight",
+  ) => {
+    const active = document.activeElement as HTMLElement | null;
+    if (!active || !formRef.current) return;
+    const candidates = Array.from(
+      formRef.current.querySelectorAll<HTMLElement>(
+        'input:not([type="hidden"]):not([type="file"]), textarea, select, button:not([disabled])',
+      ),
+    ).filter(
+      (element) =>
+        element !== active &&
+        element.getClientRects().length > 0 &&
+        element.tabIndex >= 0,
+    );
+    const origin = active.getBoundingClientRect();
+    const x = origin.left + origin.width / 2;
+    const y = origin.top + origin.height / 2;
+    const vertical = direction === "ArrowUp" || direction === "ArrowDown";
+    const forward = direction === "ArrowDown" || direction === "ArrowRight";
+    const ranked = candidates
+      .map((element) => {
+        const rect = element.getBoundingClientRect();
+        const dx = rect.left + rect.width / 2 - x;
+        const dy = rect.top + rect.height / 2 - y;
+        const primary = vertical ? dy : dx;
+        const secondary = vertical ? dx : dy;
+        return {
+          element,
+          primary,
+          score: Math.abs(primary) + Math.abs(secondary) * 2,
+        };
+      })
+      .filter(({ primary }) => (forward ? primary > 5 : primary < -5));
+    ranked.sort((a, b) => a.score - b.score);
+    ranked[0]?.element.focus();
+  };
+
+  const handleAutocompleteKeyDown = <T,>(
+    event: KeyboardEvent<HTMLInputElement>,
+    isOpen: boolean,
+    options: T[],
+    selectOption: (option: T) => void,
+    closeDropdown: () => void,
+  ) => {
+    if (!isOpen) return;
+
+    if (event.key === "Escape") {
+      event.preventDefault();
+      closeDropdown();
+      return;
+    }
+
+    if (options.length === 0) return;
+
+    if (event.key === "ArrowDown" || event.key === "ArrowUp") {
+      event.preventDefault();
+      setHighlightedOption((current) =>
+        event.key === "ArrowDown"
+          ? (current + 1) % options.length
+          : (current - 1 + options.length) % options.length,
+      );
+      return;
+    }
+
+    if (event.key === "Enter") {
+      event.preventDefault();
+      selectOption(options[Math.min(highlightedOption, options.length - 1)]);
+    }
+    // Tab never chooses an option; native focus navigation handles it.
+  };
 
   const removeRow = (
     section: "labour" | "equipment" | "materials" | "invoices",
@@ -565,6 +680,24 @@ export default function EWRForm({
       .slice(0, 8);
   };
   const jobMatches = getJobMatches(formData.jobNumber);
+
+  const selectJob = (job: Job) => {
+    console.log("JOB:", job);
+    console.log("ADDRESS:", job.address);
+    setFormData((current) => ({
+      ...current,
+
+      jobId: job.id,
+      jobNumber: job.jobNumber,
+      jobName: job.jobName,
+      address: job.address ?? "",
+      recipient: job.recipient ?? "",
+    }));
+
+    setEwrNumberError("");
+    setJobDropdownOpen(false);
+  };
+
   const parseLocalDate = (value: string) => {
     const [year, month, day] = value.split("-").map(Number);
 
@@ -573,6 +706,25 @@ export default function EWRForm({
 
   return (
     <form
+      ref={formRef}
+      onKeyDownCapture={(event) => {
+        if (event.key === "Tab") tabHeld.current = true;
+        if (
+          tabHeld.current &&
+          ["ArrowUp", "ArrowDown", "ArrowLeft", "ArrowRight"].includes(
+            event.key,
+          )
+        ) {
+          event.preventDefault();
+          event.stopPropagation();
+          moveFocusInDirection(
+            event.key as "ArrowUp" | "ArrowDown" | "ArrowLeft" | "ArrowRight",
+          );
+        }
+      }}
+      onKeyUpCapture={(event) => {
+        if (event.key === "Tab") tabHeld.current = false;
+      }}
       onSubmit={(event) => event.preventDefault()}
       className="mx-auto w-full max-w-4xl space-y-7"
     >
@@ -592,7 +744,11 @@ export default function EWRForm({
             <Field label="Job #:">
               <input
                 value={formData.jobNumber}
-                onFocus={() => setJobDropdownOpen(true)}
+                onFocus={() => {
+                  setJobDropdownOpen(true);
+                  setHighlightedOption(0);
+                }}
+                onBlur={() => setJobDropdownOpen(false)}
                 onChange={(event) => {
                   const value = event.target.value;
 
@@ -610,7 +766,17 @@ export default function EWRForm({
 
                   setEwrNumberError("");
                   setJobDropdownOpen(true);
+                  setHighlightedOption(0);
                 }}
+                onKeyDown={(event) =>
+                  handleAutocompleteKeyDown(
+                    event,
+                    jobDropdownOpen,
+                    jobMatches,
+                    selectJob,
+                    () => setJobDropdownOpen(false),
+                  )
+                }
                 placeholder="Job # or job name"
                 className={inputClassName}
               />
@@ -618,27 +784,14 @@ export default function EWRForm({
 
             {jobDropdownOpen && formData.jobNumber && jobMatches.length > 0 && (
               <div className="absolute left-0 top-full z-50 mt-1 max-h-64 w-[450px] overflow-y-auto rounded-md border-2 border-black bg-white shadow-xl">
-                {jobMatches.map((job) => (
+                {jobMatches.map((job, index) => (
                   <button
                     key={job.id}
                     type="button"
-                    onClick={() => {
-                      console.log("JOB:", job);
-                      console.log("ADDRESS:", job.address);
-                      setFormData((current) => ({
-                        ...current,
-
-                        jobId: job.id,
-                        jobNumber: job.jobNumber,
-                        jobName: job.jobName,
-                        address: job.address ?? "",
-                        recipient: job.recipient ?? "",
-                      }));
-
-                      setEwrNumberError("");
-                      setJobDropdownOpen(false);
-                    }}
-                    className="block w-full border-b px-4 py-3 text-left transition last:border-b-0 hover:bg-gray-100"
+                    onMouseEnter={() => setHighlightedOption(index)}
+                    onMouseDown={(event) => event.preventDefault()}
+                    onClick={() => selectJob(job)}
+                    className={`block w-full border-b px-4 py-3 text-left transition last:border-b-0 hover:bg-gray-100 ${highlightedOption === index ? "bg-green-100" : ""}`}
                   >
                     <div className="font-semibold">
                       {job.jobNumber} — {job.jobName}
@@ -702,8 +855,7 @@ export default function EWRForm({
                     formData.date ? parseLocalDate(formData.date) : undefined
                   }
                   onSelect={(selectedDate) => {
-                    updateMainField(
-                      "date",
+                    updateEwrDate(
                       selectedDate ? format(selectedDate, "yyyy-MM-dd") : "",
                     );
                   }}
@@ -761,6 +913,25 @@ export default function EWRForm({
           {formData.labour.map((row) => {
             const matches = getLabourMatches(row.classification);
 
+            const selectLabour = (worker: LabourRate) => {
+              setFormData((current) => ({
+                ...current,
+                labour: current.labour.map((labourRow) =>
+                  labourRow.id === row.id
+                    ? {
+                        ...labourRow,
+                        classification: worker.baseClassName,
+                        rate: getLabourRateForDate(
+                          worker,
+                          current.date,
+                        ).toString(),
+                      }
+                    : labourRow,
+                ),
+              }));
+              setOpenLabourDropdown(null);
+            };
+
             return (
               <div
                 key={row.id}
@@ -770,7 +941,11 @@ export default function EWRForm({
                   <Field label="Classification" className="md:[&>span]:hidden">
                     <input
                       value={row.classification}
-                      onFocus={() => setOpenLabourDropdown(row.id)}
+                      onFocus={() => {
+                        setOpenLabourDropdown(row.id);
+                        setHighlightedOption(0);
+                      }}
+                      onBlur={() => setOpenLabourDropdown(null)}
                       onChange={(event) => {
                         updateLabourRow(
                           row.id,
@@ -778,7 +953,17 @@ export default function EWRForm({
                           event.target.value,
                         );
                         setOpenLabourDropdown(row.id);
+                        setHighlightedOption(0);
                       }}
+                      onKeyDown={(event) =>
+                        handleAutocompleteKeyDown(
+                          event,
+                          openLabourDropdown === row.id,
+                          matches,
+                          selectLabour,
+                          () => setOpenLabourDropdown(null),
+                        )
+                      }
                       placeholder="Employee #, class, or classification"
                       className={compactInputClassName}
                     />
@@ -788,26 +973,14 @@ export default function EWRForm({
                     row.classification &&
                     matches.length > 0 && (
                       <div className="absolute left-0 top-full z-50 mt-1 max-h-60 w-full overflow-y-auto rounded-md border-2 border-black bg-white shadow-lg">
-                        {matches.map((worker) => (
+                        {matches.map((worker, index) => (
                           <button
                             key={worker.id}
                             type="button"
-                            onClick={() => {
-                              setFormData((current) => ({
-                                ...current,
-                                labour: current.labour.map((labourRow) =>
-                                  labourRow.id === row.id
-                                    ? {
-                                        ...labourRow,
-                                        classification: worker.baseClassName,
-                                        rate: worker.rate.toString(),
-                                      }
-                                    : labourRow,
-                                ),
-                              }));
-                              setOpenLabourDropdown(null);
-                            }}
-                            className="w-full border-b px-3 py-2 text-left transition last:border-b-0 hover:bg-gray-100"
+                            onMouseEnter={() => setHighlightedOption(index)}
+                            onMouseDown={(event) => event.preventDefault()}
+                            onClick={() => selectLabour(worker)}
+                            className={`w-full border-b px-3 py-2 text-left transition last:border-b-0 hover:bg-gray-100 ${highlightedOption === index ? "bg-green-100" : ""}`}
                           >
                             <div className="font-semibold">
                               {worker.baseClassName}
@@ -815,7 +988,11 @@ export default function EWRForm({
 
                             <div className="text-sm text-gray-500">
                               #{worker.employeeNumber} · {worker.baseWorkClass}{" "}
-                              · ${worker.rate.toFixed(2)}
+                              · $
+                              {getLabourRateForDate(
+                                worker,
+                                formData.date,
+                              ).toFixed(2)}
                             </div>
                           </button>
                         ))}
@@ -884,6 +1061,24 @@ export default function EWRForm({
           {formData.equipment.map((row) => {
             const matches = getEquipMatches(row.name);
 
+            const selectEquipment = (equip: EquipmentRate) => {
+              setFormData((current) => ({
+                ...current,
+                equipment: current.equipment.map((equipRow) =>
+                  equipRow.id === row.id
+                    ? {
+                        ...equipRow,
+                        name: equip.description,
+                        unitNumber: equip.equipmentNumber,
+                        rate: equip.rate.toString(),
+                      }
+                    : equipRow,
+                ),
+              }));
+
+              setOpenEquipdDropdown(null);
+            };
+
             return (
               <div
                 key={row.id}
@@ -894,12 +1089,26 @@ export default function EWRForm({
                   <Field label="Name" className="md:[&>span]:hidden">
                     <input
                       value={row.name}
-                      onFocus={() => setOpenEquipdDropdown(row.id)}
+                      onFocus={() => {
+                        setOpenEquipdDropdown(row.id);
+                        setHighlightedOption(0);
+                      }}
+                      onBlur={() => setOpenEquipdDropdown(null)}
                       onChange={(event) => {
                         updateEquipmentRow(row.id, "name", event.target.value);
 
                         setOpenEquipdDropdown(row.id);
+                        setHighlightedOption(0);
                       }}
+                      onKeyDown={(event) =>
+                        handleAutocompleteKeyDown(
+                          event,
+                          openEquipDropdown === row.id,
+                          matches,
+                          selectEquipment,
+                          () => setOpenEquipdDropdown(null),
+                        )
+                      }
                       placeholder="Equipment # or Description"
                       className={compactInputClassName}
                     />
@@ -909,28 +1118,14 @@ export default function EWRForm({
                     row.name &&
                     matches.length > 0 && (
                       <div className="absolute left-0 top-full z-50 mt-1 max-h-60 w-full overflow-y-auto rounded-md border-2 border-black bg-white shadow-lg">
-                        {matches.map((equip) => (
+                        {matches.map((equip, index) => (
                           <button
                             key={equip.id}
                             type="button"
-                            onClick={() => {
-                              setFormData((current) => ({
-                                ...current,
-                                equipment: current.equipment.map((equipRow) =>
-                                  equipRow.id === row.id
-                                    ? {
-                                        ...equipRow,
-                                        name: equip.description,
-                                        unitNumber: equip.equipmentNumber,
-                                        rate: equip.rate.toString(),
-                                      }
-                                    : equipRow,
-                                ),
-                              }));
-
-                              setOpenEquipdDropdown(null);
-                            }}
-                            className="w-full border-b px-3 py-2 text-left transition last:border-b-0 hover:bg-gray-100"
+                            onMouseEnter={() => setHighlightedOption(index)}
+                            onMouseDown={(event) => event.preventDefault()}
+                            onClick={() => selectEquipment(equip)}
+                            className={`w-full border-b px-3 py-2 text-left transition last:border-b-0 hover:bg-gray-100 ${highlightedOption === index ? "bg-green-100" : ""}`}
                           >
                             <div className="font-semibold">
                               {equip.description}
@@ -1026,6 +1221,23 @@ export default function EWRForm({
           {formData.materials.map((row) => {
             const matches = getMaterialMatches(row.name);
 
+            const selectMaterial = (material: MaterialRate) => {
+              setFormData((current) => ({
+                ...current,
+                materials: current.materials.map((materialRow) =>
+                  materialRow.id === row.id
+                    ? {
+                        ...materialRow,
+                        name: material.type,
+                        unit: material.unit,
+                      }
+                    : materialRow,
+                ),
+              }));
+
+              setOpenMaterialDropdown(null);
+            };
+
             return (
               <div
                 key={row.id}
@@ -1036,12 +1248,26 @@ export default function EWRForm({
                   <Field label="Name" className="md:[&>span]:hidden">
                     <input
                       value={row.name}
-                      onFocus={() => setOpenMaterialDropdown(row.id)}
+                      onFocus={() => {
+                        setOpenMaterialDropdown(row.id);
+                        setHighlightedOption(0);
+                      }}
+                      onBlur={() => setOpenMaterialDropdown(null)}
                       onChange={(event) => {
                         updateMaterialRow(row.id, "name", event.target.value);
 
                         setOpenMaterialDropdown(row.id);
+                        setHighlightedOption(0);
                       }}
+                      onKeyDown={(event) =>
+                        handleAutocompleteKeyDown(
+                          event,
+                          openMaterialDropdown === row.id,
+                          matches,
+                          selectMaterial,
+                          () => setOpenMaterialDropdown(null),
+                        )
+                      }
                       placeholder="Material description or Unit"
                       className={compactInputClassName}
                     />
@@ -1051,28 +1277,14 @@ export default function EWRForm({
                     row.name &&
                     matches.length > 0 && (
                       <div className="absolute left-0 top-full z-50 mt-1 max-h-60 w-full overflow-y-auto rounded-md border-2 border-black bg-white shadow-lg">
-                        {matches.map((material) => (
+                        {matches.map((material, index) => (
                           <button
                             key={material.id}
                             type="button"
-                            onClick={() => {
-                              setFormData((current) => ({
-                                ...current,
-                                materials: current.materials.map(
-                                  (materialRow) =>
-                                    materialRow.id === row.id
-                                      ? {
-                                          ...materialRow,
-                                          name: material.type,
-                                          unit: material.unit,
-                                        }
-                                      : materialRow,
-                                ),
-                              }));
-
-                              setOpenMaterialDropdown(null);
-                            }}
-                            className="w-full border-b px-3 py-2 text-left transition last:border-b-0 hover:bg-gray-100"
+                            onMouseEnter={() => setHighlightedOption(index)}
+                            onMouseDown={(event) => event.preventDefault()}
+                            onClick={() => selectMaterial(material)}
+                            className={`w-full border-b px-3 py-2 text-left transition last:border-b-0 hover:bg-gray-100 ${highlightedOption === index ? "bg-green-100" : ""}`}
                           >
                             <div className="font-semibold">{material.type}</div>
 
